@@ -59,7 +59,7 @@ namespace teb_local_planner
     {
     }
 
-    bool TebVisualization::printErrorWhenNotInitialized() const
+    void TebVisualization::printErrorWhenNotInitialized() const
     {
     }
 

@@ -5,6 +5,7 @@
 #include <Eigen/Core>
 #include "misc.h"
 #include "teb_types.h"
+#include <Eigen/Geometry>
 
 namespace teb_local_planner
 {

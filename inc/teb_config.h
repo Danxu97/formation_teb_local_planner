@@ -197,7 +197,7 @@ namespace teb_local_planner
             trajectory.max_samples = 500;
             trajectory.global_plan_overwrite_orientation = true;
             trajectory.allow_init_with_backwards_motion = false;
-            trajectory.global_plan_viapoint_sep = -1;
+            trajectory.global_plan_viapoint_sep = 0.2;
             trajectory.via_points_ordered = false;
             trajectory.max_global_plan_lookahead_dist = 1;
             trajectory.global_plan_prune_distance = 1;
@@ -212,7 +212,7 @@ namespace teb_local_planner
             // Robot
 
             robot.max_vel_x = 0.4;
-            robot.max_vel_x_backwards = 0.2;
+            robot.max_vel_x_backwards = -1;
             robot.max_vel_y = 0.0;
             robot.max_vel_theta = 0.3;
             robot.acc_lim_x = 0.5;
@@ -268,16 +268,16 @@ namespace teb_local_planner
             optim.weight_inflation = 0.1;
             optim.weight_dynamic_obstacle = 50;
             optim.weight_dynamic_obstacle_inflation = 0.1;
-            optim.weight_viapoint = 1;
-            optim.weight_prefer_rotdir = 50;
+            optim.weight_viapoint = 50;
+            optim.weight_prefer_rotdir = 20;
 
             optim.weight_adapt_factor = 2.0;
             optim.obstacle_cost_exponent = 1.0;
 
             // Homotopy Class Planner
 
-            hcp.enable_homotopy_class_planning = true;
-            hcp.enable_multithreading = true;
+            hcp.enable_homotopy_class_planning = false;
+            hcp.enable_multithreading = false;
             hcp.simple_exploration = false;
             hcp.max_number_classes = 5;
             hcp.selection_cost_hysteresis = 1.0;
