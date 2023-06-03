@@ -16,6 +16,7 @@ using namespace std;
 ViaPointContainer readNumericFile(const std::string& filename) {
     ViaPointContainer data;
     std::ifstream file(filename);
+    float reso = 0.05;
 
     if (file.is_open()) {
         std::string line;
@@ -23,7 +24,7 @@ ViaPointContainer readNumericFile(const std::string& filename) {
             std::istringstream iss(line);
             double column1, column2;
             if (iss >> column1 >> column2) {
-                data.emplace_back(column1*0.02,column2*0.02);
+                data.emplace_back(column1*reso,column2*reso);
             } else {
                 std::cerr << "Error parsing line: " << line << std::endl;
             }
@@ -50,6 +51,23 @@ void writeVector3fToFile(const std::string& filename, const std::vector<Eigen::V
     }
 }
 
+void writeVectorXfToFile(const std::string& filename, const std::vector<vector<float>>& data) {
+    std::ofstream file(filename);
+
+    if (file.is_open()) {
+        for (int i=0;i<data.size();i++) {
+            for(int j=0;j<data[0].size();j++){
+                file<<data[i][j]<<" ";
+            }
+            file << std::endl;
+        }
+        file.close();
+        std::cout << "Data written to file: " << filename << std::endl;
+    } else {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+    }
+}
+
 int main()
 {   
     string fpath_path = "/home/ldx/Downloads/TEBwithoutROS/data/fpath.txt";
@@ -62,13 +80,10 @@ int main()
         via_points2.emplace_back(data[i+1][0],data[i+1][1]);
         via_points3.emplace_back(data[i+2][0],data[i+2][1]);
         via_points4.emplace_back(data[i+3][0],data[i+3][1]);
-
     }
-
-    //return 0;
-
     // 参数配置
     int len = via_points1.size();
+    std::cout<<"path size:"<<len<<std::endl;
     TebConfig config;
     
     
@@ -86,9 +101,10 @@ int main()
 
     // param
     int offset = 0;
-    while (true)
+    int iter = 0;
+    while (iter<1)
     {   
-        
+        iter++;
         memset(show_map.data,255,500*500*3);
         //PATH1
         for(int i=0;i<via_points1.size()-1;i++){
@@ -132,7 +148,11 @@ int main()
                 // vi
                 std::vector<Eigen::Vector3f> path;
                 planner1->getFullTrajectory(path);
-                writeVector3fToFile("teb1.txt",path);
+                //writeVector3fToFile("data/teb1.txt",path);
+                
+                std::vector<vector<float>> traj;
+                planner1->getFullTrajectoryWithVW(traj);
+                writeVectorXfToFile("data/traj1.txt",traj);
                 for(int i = 0;i < path.size() - 1;i ++)
                 {
                     int x = (int)(path.at(i)[0] * 100.f + offset);
@@ -150,7 +170,11 @@ int main()
                 // vi
                 std::vector<Eigen::Vector3f> path;
                 planner2->getFullTrajectory(path);
-                writeVector3fToFile("teb2.txt",path);
+                //writeVector3fToFile("data/teb2.txt",path);
+
+                std::vector<vector<float>> traj;
+                planner2->getFullTrajectoryWithVW(traj);
+                writeVectorXfToFile("data/traj2.txt",traj);
                 for(int i = 0;i < path.size() - 1;i ++)
                 {
                     int x = (int)(path.at(i)[0] * 100.f + offset);
@@ -169,7 +193,11 @@ int main()
                 // vi
                 std::vector<Eigen::Vector3f> path;
                 planner3->getFullTrajectory(path);
-                writeVector3fToFile("teb3.txt",path);
+                //writeVector3fToFile("data/teb3.txt",path);
+
+                std::vector<vector<float>> traj;
+                planner3->getFullTrajectoryWithVW(traj);
+                writeVectorXfToFile("data/traj3.txt",traj);
                 for(int i = 0;i < path.size() - 1;i ++)
                 {
                     int x = (int)(path.at(i)[0] * 100.f + offset);
@@ -187,7 +215,11 @@ int main()
                 // vi
                 std::vector<Eigen::Vector3f> path;
                 planner4->getFullTrajectory(path);
-                writeVector3fToFile("teb4.txt",path);
+                //writeVector3fToFile("data/teb4.txt",path);
+
+                std::vector<vector<float>> traj;
+                planner4->getFullTrajectoryWithVW(traj);
+                writeVectorXfToFile("data/traj4.txt",traj);
                 for(int i = 0;i < path.size() - 1;i ++)
                 {
                     int x = (int)(path.at(i)[0] * 100.f + offset);
@@ -209,7 +241,7 @@ int main()
         {
             break;
         }
-        cv::waitKey(10);
+        cv::waitKey(0);
     }
     return 0;
 }

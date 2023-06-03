@@ -2,7 +2,8 @@
 #define TEB_OPTIMAL_PLANNER_H
 
 #include <math.h>
-#include<boost/smart_ptr.hpp>
+#include <boost/smart_ptr.hpp>
+#include <Eigen/Core>
 
 // teb stuff
 #include "teb_config.h"
@@ -451,6 +452,7 @@ namespace teb_local_planner
        */
         //void getFullTrajectory(std::vector<TrajectoryPointMsg>& trajectory) const;
         void getFullTrajectory(std::vector<Eigen::Vector3f>& trajectory) const;
+        void getFullTrajectoryWithVW(std::vector<std::vector<float>>& trajectory) const;
         /**
          * @brief Check whether the planned trajectory is feasible or not.
          *

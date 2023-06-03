@@ -1148,6 +1148,60 @@ namespace teb_local_planner
         goal[2] = teb_.Pose(n-1).theta();
     }
 
+    void TebOptimalPlanner::getFullTrajectoryWithVW(std::vector<std::vector<float>>& trajectory) const
+    {
+        
+        int n = teb_.sizePoses();
+        trajectory.resize(n);
+
+        if (n == 0)
+            return;
+            
+        for(int i=0;i<n;i++){
+            trajectory[i].resize(6);
+        }
+
+        
+
+        double curr_time = 0;
+
+        // start
+        std::vector<float>& start = trajectory[0];  //引用，
+        start[0] = teb_.Pose(0).x(); //间接修改trajectory
+        start[1] = teb_.Pose(0).y();
+        start[2] = teb_.Pose(0).theta();
+        start[3] = vel_start_.second.linear.x();
+        start[4] = vel_start_.second.linear.y();
+        start[5] = vel_start_.second.angular.z();
+
+        curr_time += teb_.TimeDiff(0);
+
+        // intermediate points
+        for (int i=1; i < n-1; ++i)
+        {
+            std::vector<float>& point = trajectory[i];
+            point[0] = teb_.Pose(i).x();
+            point[1] = teb_.Pose(i).y();
+            point[2] = teb_.Pose(i).theta();
+            float vel1_x, vel1_y, vel2_x, vel2_y, omega1, omega2;
+            extractVelocity(teb_.Pose(i-1), teb_.Pose(i), teb_.TimeDiff(i-1), vel1_x, vel1_y, omega1);
+            extractVelocity(teb_.Pose(i), teb_.Pose(i+1), teb_.TimeDiff(i), vel2_x, vel2_y, omega2);
+            point[3] = 0.5*(vel1_x+vel2_x);
+            point[4] = 0.5*(vel1_y+vel2_y);
+            point[5] = 0.5*(omega1+omega2);
+
+            curr_time += teb_.TimeDiff(i);
+        }
+
+        // goal
+        std::vector<float>& goal = trajectory[n-1];
+        goal[0] = teb_.Pose(n-1).x();
+        goal[1] = teb_.Pose(n-1).y();
+        goal[2] = teb_.Pose(n-1).theta();
+        goal[3] = vel_goal_.second.linear[0];
+        goal[4] = vel_goal_.second.linear[1];
+        goal[5] = vel_goal_.second.angular[2];
+    }
 //    void TebOptimalPlanner::getFullTrajectory(std::vector<TrajectoryPointMsg>& trajectory) const
 //    {
 //        int n = teb_.sizePoses();
