@@ -132,7 +132,7 @@ namespace teb_local_planner
          * @brief Small helper function that checks if initialize() has been called and prints an error message if not.
          * @return \c true if not initialized, \c false if everything is ok
          */
-        bool printErrorWhenNotInitialized() const;
+        void printErrorWhenNotInitialized() const;
         const TebConfig* cfg_; //!< Config class that stores and manages all related parameters
 
         bool initialized_; //!< Keeps track about the correct initialization of this class
