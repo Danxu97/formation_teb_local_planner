@@ -1158,7 +1158,7 @@ namespace teb_local_planner
             return;
             
         for(int i=0;i<n;i++){
-            trajectory[i].resize(6);
+            trajectory[i].resize(7);
         }
 
         
@@ -1173,7 +1173,7 @@ namespace teb_local_planner
         start[3] = vel_start_.second.linear.x();
         start[4] = vel_start_.second.linear.y();
         start[5] = vel_start_.second.angular.z();
-
+        start[6] = curr_time;
         curr_time += teb_.TimeDiff(0);
 
         // intermediate points
@@ -1189,6 +1189,7 @@ namespace teb_local_planner
             point[3] = 0.5*(vel1_x+vel2_x);
             point[4] = 0.5*(vel1_y+vel2_y);
             point[5] = 0.5*(omega1+omega2);
+            point[6] = curr_time;
 
             curr_time += teb_.TimeDiff(i);
         }
@@ -1201,6 +1202,7 @@ namespace teb_local_planner
         goal[3] = vel_goal_.second.linear[0];
         goal[4] = vel_goal_.second.linear[1];
         goal[5] = vel_goal_.second.angular[2];
+        goal[6] = curr_time;
     }
 //    void TebOptimalPlanner::getFullTrajectory(std::vector<TrajectoryPointMsg>& trajectory) const
 //    {

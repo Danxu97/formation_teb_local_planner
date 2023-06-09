@@ -71,7 +71,6 @@ void writeVectorXfToFile(const std::string& filename, const std::vector<vector<f
 int main()
 {   
     string fpath_path = "/home/ldx/Downloads/TEBwithoutROS/data/fpath.txt";
-    
 
     ViaPointContainer via_points1,via_points2,via_points3,via_points4,data;
     data= readNumericFile(fpath_path);
@@ -235,7 +234,7 @@ int main()
             
             //cv::createTrackbar("start theta","path",&start_theta,100);
             //cv::createTrackbar("end theta","path",&end_theta,100);
-            cv::imshow("path",show_map);
+            //cv::imshow("path",show_map);
         }
         catch (...)
         {
