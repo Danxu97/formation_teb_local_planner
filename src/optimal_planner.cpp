@@ -8,16 +8,20 @@
 namespace teb_local_planner
 {
 
-// ============== Implementation ===================
-
+    // ============== Implementation ===================
     TebOptimalPlanner::TebOptimalPlanner() : cfg_(NULL), obstacles_(NULL), via_points_(NULL), cost_(HUGE_VAL), prefer_rotdir_(RotType::none),
-                                             robot_model_(new PointRobotFootprint()), initialized_(false), optimized_(false)
-    {
+                                            robot_model_(new PointRobotFootprint()), initialized_(false), optimized_(false), formation_path_(NULL), formation_index_(3)
+    {    
     }
 
-    TebOptimalPlanner::TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model, TebVisualizationPtr visual, const ViaPointContainer* via_points)
-    {
-        initialize(cfg, obstacles, robot_model, visual, via_points);
+    // TebOptimalPlanner::TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model, TebVisualizationPtr visual, const ViaPointContainer* via_points)
+    // {
+    //     initialize(cfg, obstacles, robot_model, visual, via_points);
+    // }
+
+    TebOptimalPlanner::TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model, TebVisualizationPtr visual, const ViaPointContainer* via_points, const FormationContainer* formation_path, int formation_index)
+    {    
+        initialize(cfg, obstacles, robot_model, visual, via_points, formation_path, formation_index);
     }
 
     TebOptimalPlanner::~TebOptimalPlanner()
@@ -30,30 +34,41 @@ namespace teb_local_planner
         //g2o::HyperGraphActionLibrary::destroy();
     }
 
-    void TebOptimalPlanner::initialize(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model, TebVisualizationPtr visual, const ViaPointContainer* via_points)
+    void TebOptimalPlanner::updateRobotModel(RobotFootprintModelPtr robot_model)
     {
-        // init optimizer (set solver and block ordering settings)
-        optimizer_ = initOptimizer();
-
-        cfg_ = &cfg;
-        obstacles_ = obstacles;
         robot_model_ = robot_model;
-        via_points_ = via_points;
-        cost_ = HUGE_VAL;
-        prefer_rotdir_ = RotType::none;
-        setVisualization(visual);
-
-        vel_start_.first = true;
-        vel_start_.second.linear.x() = 0;
-        vel_start_.second.linear.y() = 0;
-        vel_start_.second.angular.z() = 0;
-
-        vel_goal_.first = true;
-        vel_goal_.second.linear.x() = 0;
-        vel_goal_.second.linear.y() = 0;
-        vel_goal_.second.angular.z() = 0;
-        initialized_ = true;
     }
+
+
+    void TebOptimalPlanner::initialize(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model, TebVisualizationPtr visual, const ViaPointContainer* via_points, const FormationContainer* formation_path, int formation_index)
+    {    
+    
+    // init optimizer (set solver and block ordering settings)
+    optimizer_ = initOptimizer();
+    
+    cfg_ = &cfg;
+    obstacles_ = obstacles;
+    robot_model_ = robot_model;
+    via_points_ = via_points;
+
+    formation_path_ = formation_path;
+    formation_index_ = formation_index;
+    
+    cost_ = HUGE_VAL;
+    prefer_rotdir_ = RotType::none;
+    setVisualization(visual);
+    
+    vel_start_.first = true;
+    vel_start_.second.linear.x = 0;
+    vel_start_.second.linear.y = 0;
+    vel_start_.second.angular.z = 0;
+
+    vel_goal_.first = true;
+    vel_goal_.second.linear.x = 0;
+    vel_goal_.second.linear.y = 0;
+    vel_goal_.second.angular.z = 0;
+    initialized_ = true;
+    }   
 
 
     void TebOptimalPlanner::setVisualization(TebVisualizationPtr visualization)
@@ -100,7 +115,10 @@ namespace teb_local_planner
         factory->registerType("EDGE_INFLATED_OBSTACLE", std::make_shared<g2o::HyperGraphElementCreator<EdgeInflatedObstacle>>());
         factory->registerType("EDGE_DYNAMIC_OBSTACLE", std::make_shared<g2o::HyperGraphElementCreator<EdgeDynamicObstacle>>());
         factory->registerType("EDGE_VIA_POINT", std::make_shared<g2o::HyperGraphElementCreator<EdgeViaPoint>>());
+        //todo: add edge keep formation
+        factory->registerType("EDGE_VIA_POINT", std::make_shared<g2o::HyperGraphElementCreator<EdgeKeepFormation>>());
         factory->registerType("EDGE_PREFER_ROTDIR", std::make_shared<g2o::HyperGraphElementCreator<EdgePreferRotDir>>());
+        return;
     }
 
 /*
@@ -127,7 +145,7 @@ namespace teb_local_planner
         return optimizer;
     }
 
-
+    //step 2
     bool TebOptimalPlanner::optimizeTEB(int iterations_innerloop, int iterations_outerloop, bool compute_cost_afterwards,
                                         double obst_cost_scale, double viapoint_cost_scale, bool alternative_time_cost)
     {
@@ -235,6 +253,7 @@ namespace teb_local_planner
         return plan(start_, goal_, start_vel);
     }
 
+    //step 1 
     bool TebOptimalPlanner::plan(const PoseSE2& start, const PoseSE2& goal, const Twist* start_vel, bool free_goal_vel)
     {
         if (!teb_.isInit())
@@ -279,13 +298,16 @@ namespace teb_local_planner
         AddTEBVertices();
 
         // add Edges (local cost functions)
-        if (cfg_->obstacles.legacy_obstacle_association)
+        if (cfg_->obstacles.legacy_obstacle_association) //now: false
             AddEdgesObstaclesLegacy(weight_multiplier);
         else
             AddEdgesObstacles(weight_multiplier);
 
-        if (cfg_->obstacles.include_dynamic_obstacles)
+        if (cfg_->obstacles.include_dynamic_obstacles)//now: false
             AddEdgesDynamicObstacles();
+
+        if (formation_index_ != 3)
+            AddEdgesFormation();    
 
         AddEdgesViaPoints();
 
