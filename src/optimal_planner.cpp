@@ -297,8 +297,13 @@ namespace teb_local_planner
 
         AddEdgesShortestPath();
 
-        if (cfg_->robot.min_turning_radius == 0 || cfg_->optim.weight_kinematics_turning_radius == 0)
-            AddEdgesKinematicsDiffDrive(); // we have a differential drive robot
+        if (cfg_->robot.min_turning_radius == 0 ){
+            if(cfg_->optim.weight_kinematics_turning_radius > 0)
+                AddEdgesKinematicsDiffDrive(); // we have a differential drive robot
+            //we have a Omnidirectional Robot
+        }
+            
+            
         else
             AddEdgesKinematicsCarlike(); // we have a carlike robot since the turning radius is bounded from below.
 

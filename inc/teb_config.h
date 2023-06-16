@@ -218,7 +218,7 @@ namespace teb_local_planner
             robot.acc_lim_x = 0.5;
             robot.acc_lim_y = 0.5;
             robot.acc_lim_theta = 0.5;
-            robot.min_turning_radius = 0;
+            robot.min_turning_radius = 0;//0 for Omnidirectional robot
             robot.wheelbase = 1.0;
             robot.cmd_angle_instead_rotvel = false;
             robot.is_footprint_dynamic = false;
@@ -261,7 +261,7 @@ namespace teb_local_planner
             optim.weight_acc_lim_theta = 1;
             optim.weight_kinematics_nh = 1000;
             optim.weight_kinematics_forward_drive = 1;
-            optim.weight_kinematics_turning_radius = 1;
+            optim.weight_kinematics_turning_radius = 0; //0 for Omnidirectional robot 
             optim.weight_optimaltime = 1;
             optim.weight_shortest_path = 0;
             optim.weight_obstacle = 50;
