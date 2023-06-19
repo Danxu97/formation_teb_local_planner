@@ -192,7 +192,7 @@ namespace teb_local_planner
             // Trajectory
 
             trajectory.teb_autosize = true;
-            trajectory.dt_ref = 0.6;
+            trajectory.dt_ref = 0.3;
             trajectory.dt_hysteresis = 0.1;
             trajectory.min_samples = 3;
             trajectory.max_samples = 500;
@@ -212,9 +212,9 @@ namespace teb_local_planner
 
             // Robot
 
-            robot.max_vel_x = 0.5;
-            robot.max_vel_x_backwards = 0.5;
-            robot.max_vel_y = 0.5;
+            robot.max_vel_x = 0.4;
+            robot.max_vel_x_backwards = 0.4;
+            robot.max_vel_y = 0.4;
             robot.max_vel_theta = 0.3;
             robot.acc_lim_x = 0.3;
             robot.acc_lim_y = 0.3;
@@ -269,7 +269,7 @@ namespace teb_local_planner
             optim.weight_inflation = 1;
             optim.weight_dynamic_obstacle = 50;
             optim.weight_dynamic_obstacle_inflation = 0.1;
-            optim.weight_keep_formation = 80; //80
+            optim.weight_keep_formation = 0; //80
             optim.weight_viapoint = 10;
             optim.weight_prefer_rotdir = 20;
 
