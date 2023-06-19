@@ -691,7 +691,7 @@ namespace teb_local_planner
                 getStFromTraj(formation_trajs_,time_now,formation_st_ptr);
 
             }
-            std::cout<<"time now:"<<time_now<<"\n_measurement    0:"<<*formation_st_ptr<<std::endl;
+            //std::cout<<"time now:"<<time_now<<"\n_measurement    0:"<<*formation_st_ptr<<std::endl;
             //当前机器人的每个配置都计算一遍error
             EdgeKeepFormation* keep_formation_edge = new EdgeKeepFormation(formation_index_);
             keep_formation_edge->setVertex(0,teb_.PoseVertex(i));

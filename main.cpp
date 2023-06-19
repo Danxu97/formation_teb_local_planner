@@ -101,10 +101,10 @@ int main()
     // Setup robot shape model
     RobotFootprintModelPtr robot_model = boost::make_shared<CircularRobotFootprint>(0.4);
     auto visual = TebVisualizationPtr(new TebVisualization(config));
-    auto planner1 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points1, &Trajs, 1);
-    auto planner2 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points2, &Trajs, 2);
-    auto planner3 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points3, &Trajs, 3);
-    auto planner4 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points4, &Trajs, 4);
+    auto planner1 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points1, &Trajs, 0);
+    auto planner2 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points2, &Trajs, 1);
+    auto planner3 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points3, &Trajs, 2);
+    auto planner4 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points4, &Trajs, 3);
     cv::Mat show_map = cv::Mat::zeros(cv::Size(500,500),CV_8UC3);
 
     // param

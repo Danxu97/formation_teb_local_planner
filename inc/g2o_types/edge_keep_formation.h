@@ -87,13 +87,9 @@ public:
    */   
   void computeError()
   {
-    //std::cout<<"* _measurement"<<std::endl <<* _measurement<<std::endl;
-
-    //ROS_ASSERT_MSG(cfg_ && _measurement, "You must call setTebConfig(), setFormation() and on EdgeFormation()");    
-
     const VertexPose* bandpt = static_cast<const VertexPose*>(_vertices[0]);
 
-    Eigen::Matrix4d SNL0;
+    Eigen::Matrix4d SNL0,SNL;
 
     //rect
     SNL0 <<  1.0000,   -0.2929,   -0.4142,   -0.2929,
@@ -101,57 +97,37 @@ public:
             -0.4142,   -0.2929,    1.0000,   -0.2929,
             -0.2929,   -0.4142,   -0.2929,    1.0000;
 
-    Eigen::Matrix4d SNL = Eigen::Matrix4d::Zero();
+    Eigen::Matrix<double, 4, 2> m = *_measurement;
+    Eigen::Matrix<double,3,2> D2A0,D2A;
+    Eigen::Matrix<double,3,3> D2A_SNL0,D2A_SNL;
+    
+    D2A0.row(0) = m.row((index_+3)%4);
+    D2A0.row(1) = m.row((index_+1)%4);
+    D2A0.row(2) = m.row((index_)%4);
+    //std::cout<<"D2A0:"<<D2A0<<std::endl;
+    calculateCircleIntersection(D2A0,1,1);
 
-    Eigen::Matrix4d Adj = Eigen::Matrix4d::Zero();
+    D2A_SNL0 = calculateSNL(D2A0,true);
 
-    Eigen::Vector4d Deg = Eigen::Vector4d::Zero();
+    D2A.row(0) = m.row((index_+3)%4);
+    D2A.row(1) = m.row((index_+1)%4);
+    D2A.row(2) = bandpt->position();
+    D2A_SNL = calculateSNL(D2A,true);
+    
+    //std::cout<<"D2A0:"<<D2A0<<std::endl;
+    //std::cout<<"D2A:"<<D2A<<std::endl;
 
-    Eigen::Vector2d pose0, pose1;
-
-
-    for (int i = 0; i < 4; ++i)
-    {
-      if (i == index_)
-        pose0 = bandpt->position();
-      else
-        pose0 = _measurement->row(i);
-
-      for (int j = 0; j < 4; ++j) 
-      {
-        if (j == index_)
-          pose1 = bandpt->position();
-        else
-          pose1 = _measurement->row(j);
-        
-        Adj(i, j) = (pose0 - pose1).norm();
-
-        Deg(i) = Deg(i) + Adj(i, j);
-      }
-    }
-
-    for (int i = 0; i < 4; ++i) 
-    {
-      for (int j = 0; j < 4; ++j) 
-      {
-        if (i == j)
-          SNL(i, j) = 1;
-        else
-          SNL(i, j) = -Adj(i, j) * pow(Deg(i), -0.5) * pow(Deg(j), -0.5);
-      }
-    }
-
-    _error[0] = (SNL0 - SNL).norm();
-
+    m.row(index_) = bandpt->position();                           
+    SNL = calculateSNL(m,true);
+    _error[0] = 1.0*(SNL0 - SNL).norm() + 0.0*(D2A_SNL0 - D2A_SNL).norm();
+    //----------dubug log---------------//
     DataEntry data;
     data.id = index_;
     data.pose0 = bandpt->position();
-    data.measurement = *_measurement;
+    data.measurement = m;
     data.ff = _error[0];
     // 将数据写入文件
     writeDataToFile(data, "/home/ldx/workspace/formation_teb/src/data/dubug_data.txt");
-    //std::cout<<"_measurement    2:"<<std::endl <<* _measurement<<std::endl;
-    //ROS_ASSERT_MSG(std::isfinite(_error[0]), "EdgeFormation::computeError() _error[0]=%f\n",_error[0]);
   }
   
 
@@ -254,6 +230,70 @@ private:
     file.close();
 
     //std::cout << "数据已追加到文件" << std::endl;
+  }
+
+  void calculateCircleIntersection(Eigen::Matrix<double,3,2>& matrix, double r1, double r2) {
+    Eigen::Vector2d point1 = matrix.row(0);//第1行
+    Eigen::Vector2d point2 = matrix.row(1); 
+
+    // 计算两个圆心之间的距离
+    double distance = (point2 - point1).norm();
+
+    // 如果两个圆心距离大于两个圆的半径之和，说明两个圆不相交，返回
+    if (distance > r1 + r2) {
+        return;
+    }
+
+    // 计算圆心连线与水平线之间的夹角
+    double theta = std::atan2(point2.y() - point1.y(), point2.x() - point1.x());
+
+    // 计算交点的坐标
+    double intersection_x1 = point1.x() + r1 * std::cos(theta);
+    double intersection_y1 = point1.y() + r1 * std::sin(theta);
+    double intersection_x2 = point2.x() - r2 * std::cos(theta);
+    double intersection_y2 = point2.y() - r2 * std::sin(theta);
+
+    // 将交点坐标放入矩阵的第三行
+    double d1 = abs(intersection_x1-matrix(2,0)) + abs(intersection_y1-matrix(2,1));
+    double d2 = abs(intersection_x2-matrix(2,0)) + abs(intersection_y2-matrix(2,1));
+    if(d1 < d2) matrix.row(2) << intersection_x1, intersection_y1;
+    else matrix.row(2) << intersection_x2, intersection_y2;
+    //std::cout<<"matrix row(2):"<<matrix.row(2)<<std::endl;
+  }
+
+  
+  Eigen::MatrixXd calculateSNL(const Eigen::MatrixXd& matrix,bool sn=true) {
+    int numPoints = matrix.rows();  // 矩阵的行数
+
+    // 创建邻接矩阵和度矩阵
+    Eigen::MatrixXd adjacencyMatrix = Eigen::MatrixXd::Zero(numPoints, numPoints);
+    Eigen::MatrixXd degreeMatrix = Eigen::MatrixXd::Zero(numPoints,numPoints);
+    for (int i = 0; i < numPoints; ++i) {
+        for (int j = 0; j < numPoints; ++j) {
+            double distance = (matrix.row(i) - matrix.row(j)).norm();  // 计算两行之间的距离
+           // std::cout<<"row(i):"<<matrix.row(i)<<"row(j):"<<matrix.row(j)<<"distance:"<<distance<<std::endl;
+            adjacencyMatrix(i, j) = distance;
+            degreeMatrix(i,i) += adjacencyMatrix(i,j);
+        }
+    }
+
+    // 计算拉普拉斯矩阵
+    Eigen::MatrixXd laplacianMatrix = Eigen::MatrixXd::Zero(numPoints, numPoints);
+    laplacianMatrix = degreeMatrix-adjacencyMatrix;
+    if(!sn) return laplacianMatrix;
+
+    // 对称归一化处理
+    Eigen::MatrixXd SNL = Eigen::MatrixXd::Zero(numPoints, numPoints);
+    for (int i = 0; i < numPoints; ++i) {
+      for (int j = 0; j < numPoints; ++j) {
+        if(i==j)
+          SNL(i,j)=1;
+        else
+          SNL(i,j)=-adjacencyMatrix(i, j) * std::pow(degreeMatrix(i,i),-0.5) * std::pow(degreeMatrix(j,j),-0.5);
+      }
+    }
+
+    return SNL;
   }
   
 public: 	
