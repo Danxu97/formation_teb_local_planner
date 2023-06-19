@@ -192,7 +192,7 @@ namespace teb_local_planner
             // Trajectory
 
             trajectory.teb_autosize = true;
-            trajectory.dt_ref = 0.3;
+            trajectory.dt_ref = 0.6;
             trajectory.dt_hysteresis = 0.1;
             trajectory.min_samples = 3;
             trajectory.max_samples = 500;
@@ -212,12 +212,12 @@ namespace teb_local_planner
 
             // Robot
 
-            robot.max_vel_x = 1;
-            robot.max_vel_x_backwards = 1;
-            robot.max_vel_y = 1;
+            robot.max_vel_x = 0.5;
+            robot.max_vel_x_backwards = 0.5;
+            robot.max_vel_y = 0.5;
             robot.max_vel_theta = 0.3;
-            robot.acc_lim_x = 0.5;
-            robot.acc_lim_y = 0.5;
+            robot.acc_lim_x = 0.3;
+            robot.acc_lim_y = 0.3;
             robot.acc_lim_theta = 0.5;
             robot.min_turning_radius = 0;// 0 for omni robot
             robot.wheelbase = 1.0;
@@ -226,20 +226,20 @@ namespace teb_local_planner
 
             // GoalTolerance
 
-            goal_tolerance.xy_goal_tolerance = 0.2;
-            goal_tolerance.yaw_goal_tolerance = 0.2;
+            goal_tolerance.xy_goal_tolerance = 0.1;
+            goal_tolerance.yaw_goal_tolerance = 0.1;
             goal_tolerance.free_goal_vel = false;
             goal_tolerance.complete_global_plan = true;
 
             // Obstacles
 
-            obstacles.min_obstacle_dist = 0.5;
-            obstacles.inflation_dist = 0.6;
+            obstacles.min_obstacle_dist = 0.2;
+            obstacles.inflation_dist = 0.2;
             obstacles.dynamic_obstacle_inflation_dist = 0.6;
-            obstacles.include_dynamic_obstacles = true;
+            obstacles.include_dynamic_obstacles = false;
             obstacles.include_costmap_obstacles = true;
             obstacles.costmap_obstacles_behind_robot_dist = 1.5;
-            obstacles.obstacle_poses_affected = 25;
+            obstacles.obstacle_poses_affected = 1000;
             obstacles.legacy_obstacle_association = false;
             obstacles.obstacle_association_force_inclusion_factor = 1.5;
             obstacles.obstacle_association_cutoff_factor = 5;
@@ -265,12 +265,12 @@ namespace teb_local_planner
             optim.weight_kinematics_turning_radius = 0; //0 for omni robot
             optim.weight_optimaltime = 0.1;
             optim.weight_shortest_path = 0;
-            optim.weight_obstacle = 50;
-            optim.weight_inflation = 0.1;
+            optim.weight_obstacle = 100;
+            optim.weight_inflation = 1;
             optim.weight_dynamic_obstacle = 50;
             optim.weight_dynamic_obstacle_inflation = 0.1;
-            optim.weight_keep_formation = 20;
-            optim.weight_viapoint = 100;
+            optim.weight_keep_formation = 80; //80
+            optim.weight_viapoint = 10;
             optim.weight_prefer_rotdir = 20;
 
             optim.weight_adapt_factor = 2.0;

@@ -13,6 +13,30 @@ using namespace std;
 
 
 
+ObstContainer readNumericFile4obs(const std::string& filename) {
+    ObstContainer data;
+    std::ifstream file(filename);
+    float reso = 0.05;
+
+    if (file.is_open()) {
+        std::string line;
+        while (std::getline(file, line)) {
+            std::istringstream iss(line);
+            double column1, column2;
+            if (iss >> column1 >> column2) {
+                data.emplace_back(boost::make_shared<PointObstacle>(column1*reso,column2*reso));
+            } else {
+                std::cerr << "Error parsing line: " << line << std::endl;
+            }
+        }
+        file.close();
+    } else {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+    }
+    std::cout<<"load obs data"<<std::endl;
+    return data;
+}
+
 ViaPointContainer readNumericFile(const std::string& filename) {
     ViaPointContainer data;
     std::ifstream file(filename);
@@ -33,7 +57,7 @@ ViaPointContainer readNumericFile(const std::string& filename) {
     } else {
         std::cerr << "Failed to open file: " << filename << std::endl;
     }
-
+    std::cout<<"load ViaPoint data"<<std::endl;
     return data;
 }
 
@@ -71,6 +95,7 @@ void writeVectorXfToFile(const std::string& filename, const std::vector<vector<f
 int main()
 {   
     string fpath_path = "/home/ldx/workspace/formation_teb/src/data/fpath.txt";
+    string obs_path = "/home/ldx/workspace/formation_teb/src/data/obs.txt";
     string teb1_path = "/home/ldx/workspace/formation_teb/src/data/traj1.txt";
     string teb2_path = "/home/ldx/workspace/formation_teb/src/data/traj2.txt";
     string teb3_path = "/home/ldx/workspace/formation_teb/src/data/traj3.txt";
@@ -79,10 +104,13 @@ int main()
     std::ofstream file("/home/ldx/workspace/formation_teb/src/data/dubug_data.txt", std::ios::trunc);
     file.close();
 
-    ViaPointContainer via_points1,via_points2,via_points3,via_points4,data;
     FormationTrajsContainer Trajs(4); 
     std::vector<vector<float>> traj1,traj2,traj3,traj4;
+    ViaPointContainer via_points1,via_points2,via_points3,via_points4,data;
+    ObstContainer obs;
+
     data= readNumericFile(fpath_path);
+    obs = readNumericFile4obs(obs_path);
     for(int i=0; i<data.size();i+=4){
         via_points1.emplace_back(data[i][0],data[i][1]);
         via_points2.emplace_back(data[i+1][0],data[i+1][1]);
@@ -95,22 +123,22 @@ int main()
     TebConfig config;
     
     
-    std::vector<ObstaclePtr> obst_vector;
+    //std::vector<ObstaclePtr> obst_vector;
     //obst_vector.emplace_back(boost::make_shared<PointObstacle>(0,0));//flat radius = 0.5m
 
     // Setup robot shape model
-    RobotFootprintModelPtr robot_model = boost::make_shared<CircularRobotFootprint>(0.4);
+    RobotFootprintModelPtr robot_model = boost::make_shared<CircularRobotFootprint>(0.2);
     auto visual = TebVisualizationPtr(new TebVisualization(config));
-    auto planner1 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points1, &Trajs, 0);
-    auto planner2 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points2, &Trajs, 1);
-    auto planner3 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points3, &Trajs, 2);
-    auto planner4 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points4, &Trajs, 3);
+    auto planner1 = new TebOptimalPlanner(config, &obs, robot_model, visual, &via_points1, &Trajs, 0);
+    auto planner2 = new TebOptimalPlanner(config, &obs, robot_model, visual, &via_points2, &Trajs, 1);
+    auto planner3 = new TebOptimalPlanner(config, &obs, robot_model, visual, &via_points3, &Trajs, 2);
+    auto planner4 = new TebOptimalPlanner(config, &obs, robot_model, visual, &via_points4, &Trajs, 3);
     cv::Mat show_map = cv::Mat::zeros(cv::Size(500,500),CV_8UC3);
 
     // param
     int offset = 0;
     int iter = 0;
-    while (iter<10)
+    while (iter<1)
     {   
         iter++;
         try

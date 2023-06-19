@@ -411,7 +411,7 @@ namespace teb_local_planner
         if (cfg_->optim.weight_obstacle==0 || weight_multiplier==0 || obstacles_==nullptr )
             return; // if weight equals zero skip adding edges!
 
-
+        //障碍物膨胀距离大于到障碍物的最小距离
         bool inflated = cfg_->obstacles.inflation_dist > cfg_->obstacles.min_obstacle_dist;
 
         Eigen::Matrix<double,1,1> information;
