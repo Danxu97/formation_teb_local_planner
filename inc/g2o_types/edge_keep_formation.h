@@ -40,8 +40,8 @@
  *
  * Author: Christoph Rösmann
  *********************************************************************/
-#ifndef EDGE_OBSTACLE_H_
-#define EDGE_OBSTACLE_H_
+#ifndef EDGE_KEEP_FORMATION_H_
+#define EDGE_KEEP_FORMATION_H_
 
 #include "../obstacles.h"
 #include "../robot_footprint_model.h"
@@ -60,14 +60,14 @@ namespace teb_local_planner
  * @remarks Do not forget to call setTebConfig(), setVertexIdx() and 
  * @warning Experimental
  */   
-class EdgeKeepFormation : public BaseTebUnaryEdge<1, const Eigen::Matrix<double, 3, 2>*, VertexPose>  //1指定error的个数，会结合information这个权重矩阵进行总error计算
+class EdgeKeepFormation : public BaseTebUnaryEdge<1, const Eigen::Matrix<double, 4, 2>*, VertexPose>  //1指定error的个数，会结合information这个权重矩阵进行总error计算
 {
 public:
     
   /**
    * @brief Construct edge and specify the index of robot
    */    
-  EdgeFormation() : index_(3)
+  EdgeKeepFormation() : index_(3)
   {
     _measurement = NULL;
   }
@@ -76,7 +76,7 @@ public:
    * @brief Construct edge and specify the index of robot
    * @param index_ index of robot(0, 1, 2, 3)
    */    
-  EdgeFormation(int index) : index_(index)
+  EdgeKeepFormation(int index) : index_(index)
   {
     _measurement = NULL;
   }
@@ -87,7 +87,7 @@ public:
    */   
   void computeError()
   {
-    std::cout<<"* _measurement"<<std::endl <<* _measurement<<std::endl;
+    //std::cout<<"* _measurement"<<std::endl <<* _measurement<<std::endl;
 
     //ROS_ASSERT_MSG(cfg_ && _measurement, "You must call setTebConfig(), setFormation() and on EdgeFormation()");    
 
@@ -95,10 +95,11 @@ public:
 
     Eigen::Matrix4d SNL0;
 
-    SNL0 << 1.0000, -0.388, -0.3880, -0.2733,
-	     -0.3880, 1.0000, -0.3880, -0.2733,
-	     -0.3880, -0.3880, 1.0000, -0.2733,
-	     -0.2733, -0.2733, -0.2733, 1.0000;
+    //rect
+    SNL0 <<  1.0000,   -0.2929,   -0.4142,   -0.2929,
+            -0.2929,    1.0000,   -0.2929,   -0.4142,
+            -0.4142,   -0.2929,    1.0000,   -0.2929,
+            -0.2929,   -0.4142,   -0.2929,    1.0000;
 
     Eigen::Matrix4d SNL = Eigen::Matrix4d::Zero();
 
@@ -142,8 +143,14 @@ public:
 
     _error[0] = (SNL0 - SNL).norm();
 
-    std::cout<<"the error of formation is : "<< _error[0] <<std::endl;
-
+    DataEntry data;
+    data.id = index_;
+    data.pose0 = bandpt->position();
+    data.measurement = *_measurement;
+    data.ff = _error[0];
+    // 将数据写入文件
+    writeDataToFile(data, "/home/ldx/workspace/formation_teb/src/data/dubug_data.txt");
+    //std::cout<<"_measurement    2:"<<std::endl <<* _measurement<<std::endl;
     //ROS_ASSERT_MSG(std::isfinite(_error[0]), "EdgeFormation::computeError() _error[0]=%f\n",_error[0]);
   }
   
@@ -197,7 +204,7 @@ public:
    * @brief Set Formation for the underlying cost function
    * @param obstacles Const pointer to an ObstContainer
    */     
-  void setFormation(const Eigen::Matrix<double, 3, 2>* formation_position_ptr)
+  void setFormation(const Eigen::Matrix<double, 4, 2>* formation_position_ptr)
   {
     _measurement = formation_position_ptr;
   }
@@ -208,16 +215,46 @@ public:
    * @param robot_model Robot model required for distance calculation
    * @param obstacles 2D position vector containing the position of the obstacles
    */
-  void setParameters(const TebConfig& cfg, const Eigen::Matrix<double, 3, 2>* formation_position_ptr)
+  void setParameters(const TebConfig& cfg, const Eigen::Matrix<double, 4, 2>* formation_position_ptr)
   {
     cfg_ = &cfg;
     _measurement = formation_position_ptr;
-    // std::cout<<"* _measurement"<<std::endl <<* _measurement<<std::endl;
+    // std::cout<<"* _measurement     1:"<<std::endl <<* _measurement<<std::endl;
   }
   
 protected:
 
   int index_; //index of robot(0, 1, 2, 3)
+
+private:
+  struct DataEntry {
+    int id;
+    Eigen::Vector2d pose0;
+    Eigen::Matrix<double, 4, 2> measurement;
+    double ff;
+  };
+  void writeDataToFile(const DataEntry& data, const std::string& filename) {
+    // 打开文件并追加数据
+    std::ofstream file(filename, std::ios::app);
+    if (!file.is_open()) {
+        std::cerr << "无法打开文件" << std::endl;
+        return;
+    }
+
+    // 将数据按行写入文件
+    file << data.id << " "
+        << data.pose0[0] << " " << data.pose0[1] << " "
+        << data.measurement.row(0)[0] << " " << data.measurement.row(0)[1] << " "
+        << data.measurement.row(1)[0] << " " << data.measurement.row(1)[1] << " "
+        << data.measurement.row(2)[0] << " " << data.measurement.row(2)[1] << " "
+        << data.measurement.row(3)[0] << " " << data.measurement.row(3)[1] << " "
+        << data.ff << std::endl;
+
+    // 关闭文件
+    file.close();
+
+    //std::cout << "数据已追加到文件" << std::endl;
+  }
   
 public: 	
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

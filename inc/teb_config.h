@@ -116,6 +116,7 @@ namespace teb_local_planner
             double weight_inflation; //!< Optimization weight for the inflation penalty (should be small)
             double weight_dynamic_obstacle; //!< Optimization weight for satisfying a minimum separation from dynamic obstacles
             double weight_dynamic_obstacle_inflation; //!< Optimization weight for the inflation penalty of dynamic obstacles (should be small)
+            double weight_keep_formation;
             double weight_viapoint; //!< Optimization weight for minimizing the distance to via-points
             double weight_prefer_rotdir; //!< Optimization weight for preferring a specific turning direction (-> currently only activated if an oscillation is detected, see 'oscillation_recovery'
 
@@ -218,7 +219,7 @@ namespace teb_local_planner
             robot.acc_lim_x = 0.5;
             robot.acc_lim_y = 0.5;
             robot.acc_lim_theta = 0.5;
-            robot.min_turning_radius = 0;
+            robot.min_turning_radius = 0;// 0 for omni robot
             robot.wheelbase = 1.0;
             robot.cmd_angle_instead_rotvel = false;
             robot.is_footprint_dynamic = false;
@@ -261,14 +262,15 @@ namespace teb_local_planner
             optim.weight_acc_lim_theta = 1;
             optim.weight_kinematics_nh = 1000;
             optim.weight_kinematics_forward_drive = 1;
-            optim.weight_kinematics_turning_radius = 1;
-            optim.weight_optimaltime = 1;
+            optim.weight_kinematics_turning_radius = 0; //0 for omni robot
+            optim.weight_optimaltime = 0.1;
             optim.weight_shortest_path = 0;
             optim.weight_obstacle = 50;
             optim.weight_inflation = 0.1;
             optim.weight_dynamic_obstacle = 50;
             optim.weight_dynamic_obstacle_inflation = 0.1;
-            optim.weight_viapoint = 50;
+            optim.weight_keep_formation = 10;
+            optim.weight_viapoint = 100;
             optim.weight_prefer_rotdir = 20;
 
             optim.weight_adapt_factor = 2.0;

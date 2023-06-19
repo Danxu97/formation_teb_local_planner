@@ -10,7 +10,7 @@ namespace teb_local_planner
 
     // ============== Implementation ===================
     TebOptimalPlanner::TebOptimalPlanner() : cfg_(NULL), obstacles_(NULL), via_points_(NULL), cost_(HUGE_VAL), prefer_rotdir_(RotType::none),
-                                            robot_model_(new PointRobotFootprint()), initialized_(false), optimized_(false), formation_path_(NULL), formation_index_(3)
+                                            robot_model_(new PointRobotFootprint()), initialized_(false), optimized_(false), formation_trajs_(NULL), formation_index_(3)
     {    
     }
 
@@ -19,9 +19,9 @@ namespace teb_local_planner
     //     initialize(cfg, obstacles, robot_model, visual, via_points);
     // }
 
-    TebOptimalPlanner::TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model, TebVisualizationPtr visual, const ViaPointContainer* via_points, const FormationContainer* formation_path, int formation_index)
+    TebOptimalPlanner::TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model, TebVisualizationPtr visual, const ViaPointContainer* via_points, const FormationTrajsContainer* formation_trajs, int formation_index)
     {    
-        initialize(cfg, obstacles, robot_model, visual, via_points, formation_path, formation_index);
+        initialize(cfg, obstacles, robot_model, visual, via_points, formation_trajs, formation_index);
     }
 
     TebOptimalPlanner::~TebOptimalPlanner()
@@ -34,40 +34,40 @@ namespace teb_local_planner
         //g2o::HyperGraphActionLibrary::destroy();
     }
 
-    void TebOptimalPlanner::updateRobotModel(RobotFootprintModelPtr robot_model)
-    {
-        robot_model_ = robot_model;
-    }
+    // void TebOptimalPlanner::updateRobotModel(RobotFootprintModelPtr robot_model)
+    // {
+    //     robot_model_ = robot_model;
+    // }
 
 
-    void TebOptimalPlanner::initialize(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model, TebVisualizationPtr visual, const ViaPointContainer* via_points, const FormationContainer* formation_path, int formation_index)
+    void TebOptimalPlanner::initialize(const TebConfig& cfg, ObstContainer* obstacles, RobotFootprintModelPtr robot_model, TebVisualizationPtr visual, const ViaPointContainer* via_points, const FormationTrajsContainer* formation_trajs, int formation_index)
     {    
     
-    // init optimizer (set solver and block ordering settings)
-    optimizer_ = initOptimizer();
-    
-    cfg_ = &cfg;
-    obstacles_ = obstacles;
-    robot_model_ = robot_model;
-    via_points_ = via_points;
+        // init optimizer (set solver and block ordering settings)
+        optimizer_ = initOptimizer();
+        
+        cfg_ = &cfg;
+        obstacles_ = obstacles;
+        robot_model_ = robot_model;
+        via_points_ = via_points;
 
-    formation_path_ = formation_path;
-    formation_index_ = formation_index;
-    
-    cost_ = HUGE_VAL;
-    prefer_rotdir_ = RotType::none;
-    setVisualization(visual);
-    
-    vel_start_.first = true;
-    vel_start_.second.linear.x = 0;
-    vel_start_.second.linear.y = 0;
-    vel_start_.second.angular.z = 0;
+        formation_trajs_ = formation_trajs;
+        formation_index_ = formation_index;
+        
+        cost_ = HUGE_VAL;
+        prefer_rotdir_ = RotType::none;
+        setVisualization(visual);
+        
+        vel_start_.first = true;
+        vel_start_.second.linear.x() = 0;
+        vel_start_.second.linear.y() = 0;
+        vel_start_.second.angular.z() = 0;
 
-    vel_goal_.first = true;
-    vel_goal_.second.linear.x = 0;
-    vel_goal_.second.linear.y = 0;
-    vel_goal_.second.angular.z = 0;
-    initialized_ = true;
+        vel_goal_.first = true;
+        vel_goal_.second.linear.x() = 0;
+        vel_goal_.second.linear.y() = 0;
+        vel_goal_.second.angular.z() = 0;
+        initialized_ = true;
     }   
 
 
@@ -116,7 +116,7 @@ namespace teb_local_planner
         factory->registerType("EDGE_DYNAMIC_OBSTACLE", std::make_shared<g2o::HyperGraphElementCreator<EdgeDynamicObstacle>>());
         factory->registerType("EDGE_VIA_POINT", std::make_shared<g2o::HyperGraphElementCreator<EdgeViaPoint>>());
         //todo: add edge keep formation
-        factory->registerType("EDGE_VIA_POINT", std::make_shared<g2o::HyperGraphElementCreator<EdgeKeepFormation>>());
+        factory->registerType("EDGE_KEEP_FORMATION", std::make_shared<g2o::HyperGraphElementCreator<EdgeKeepFormation>>());
         factory->registerType("EDGE_PREFER_ROTDIR", std::make_shared<g2o::HyperGraphElementCreator<EdgePreferRotDir>>());
         return;
     }
@@ -306,8 +306,8 @@ namespace teb_local_planner
         if (cfg_->obstacles.include_dynamic_obstacles)//now: false
             AddEdgesDynamicObstacles();
 
-        if (formation_index_ != 3)
-            AddEdgesFormation();    
+        //if (formation_index_ != 3)
+        AddEdgesFormation();    
 
         AddEdgesViaPoints();
 
@@ -319,8 +319,11 @@ namespace teb_local_planner
 
         AddEdgesShortestPath();
 
-        if (cfg_->robot.min_turning_radius == 0 || cfg_->optim.weight_kinematics_turning_radius == 0)
-            AddEdgesKinematicsDiffDrive(); // we have a differential drive robot
+        if (cfg_->robot.min_turning_radius == 0 ){
+            if(cfg_->optim.weight_kinematics_turning_radius > 0)
+                AddEdgesKinematicsDiffDrive(); // we have a differential drive robot
+            //we have a Omnidirectional robot
+        }
         else
             AddEdgesKinematicsCarlike(); // we have a carlike robot since the turning radius is bounded from below.
 
@@ -384,6 +387,9 @@ namespace teb_local_planner
         // add vertices to graph
         //ROS_DEBUG_COND(cfg_->optim.optimization_verbose, "Adding TEB vertices ...");
         unsigned int id_counter = 0; // used for vertices ids
+        //存在疑问
+        // obstacles_per_vertex_.resize(teb_.sizePoses());
+        // auto iter_obstacle = obstacles_per_vertex_.begin();
         for (int i=0; i<teb_.sizePoses(); ++i)
         {
             teb_.PoseVertex(i)->setId(id_counter++);
@@ -393,6 +399,9 @@ namespace teb_local_planner
                 teb_.TimeDiffVertex(i)->setId(id_counter++);
                 optimizer_->addVertex(teb_.TimeDiffVertex(i));
             }
+            //存在疑问
+            //iter_obstacle->clear();
+            //(iter_obstacle++)->reserve(obstacles_->size());
         }
     }
 
@@ -656,6 +665,43 @@ namespace teb_local_planner
         }
     }
 
+    void TebOptimalPlanner::AddEdgesFormation(){
+        if (cfg_->optim.weight_keep_formation==0 || formation_trajs_==NULL || formation_trajs_->empty())
+            return; // if weight equals zero skip adding edges!
+
+        for(int i=0;i<(*formation_trajs_).size();i++) //遍历四个机器人的轨迹
+            if ((*formation_trajs_)[i].size() == 0){ //任一机器人没轨迹，则不添加约束
+                std::cout<<"等待轨迹"<<std::endl;
+                return;
+            }
+        // std::cout<<"AddEdgesFormation"<<std::endl;
+        Eigen::Matrix<double,1,1> information;
+        information.fill(cfg_->optim.weight_keep_formation);
+        //-----添加编队约束的顶点和边-------//
+        //遍历当前配置
+        double time_now = 0;
+        for (int i=0; i < teb_.sizePoses() - 1; i++)
+        {   
+            Eigen::Matrix<double, 4, 2>* formation_st_ptr=new Eigen::Matrix<double, 4, 2>;
+            time_now +=teb_.TimeDiff(i);
+            //为机器人的每个配置在相同时刻对应上其他机器人的配置
+            for(int j=0; j < 4; ++j)
+            {
+                //formation pos储存了编队当前时刻的位置
+                getStFromTraj(formation_trajs_,time_now,formation_st_ptr);
+
+            }
+            std::cout<<"time now:"<<time_now<<"\n_measurement    0:"<<*formation_st_ptr<<std::endl;
+            //当前机器人的每个配置都计算一遍error
+            EdgeKeepFormation* keep_formation_edge = new EdgeKeepFormation(formation_index_);
+            keep_formation_edge->setVertex(0,teb_.PoseVertex(i));
+            keep_formation_edge->setInformation(information);
+            keep_formation_edge->setParameters(*cfg_, &(*formation_st_ptr));
+            optimizer_->addEdge(keep_formation_edge);
+        }
+    
+    }
+
     void TebOptimalPlanner::AddEdgesViaPoints()
     {
         if (cfg_->optim.weight_viapoint==0 || via_points_==NULL || via_points_->empty() )
@@ -855,8 +901,6 @@ namespace teb_local_planner
             }
         }
     }
-
-
 
     void TebOptimalPlanner::AddEdgesTimeOptimal()
     {
@@ -1226,58 +1270,48 @@ namespace teb_local_planner
         goal[5] = vel_goal_.second.angular[2];
         goal[6] = curr_time;
     }
-//    void TebOptimalPlanner::getFullTrajectory(std::vector<TrajectoryPointMsg>& trajectory) const
-//    {
-//        int n = teb_.sizePoses();
-//
-//        trajectory.resize(n);
-//
-//        if (n == 0)
-//            return;
-//
-//        double curr_time = 0;
-//
-//        // start
-//        TrajectoryPointMsg& start = trajectory.front();
-//        teb_.Pose(0).toPoseMsg(start.pose);
-//        start.velocity.linear.z = 0;
-//        start.velocity.angular.x = start.velocity.angular.y = 0;
-//        start.velocity.linear.x = vel_start_.second.linear.x;
-//        start.velocity.linear.y = vel_start_.second.linear.y;
-//        start.velocity.angular.z = vel_start_.second.angular.z;
-//        start.time_from_start.fromSec(curr_time);
-//
-//        curr_time += teb_.TimeDiff(0);
-//
-//        // intermediate points
-//        for (int i=1; i < n-1; ++i)
-//        {
-//            TrajectoryPointMsg& point = trajectory[i];
-//            teb_.Pose(i).toPoseMsg(point.pose);
-//            point.velocity.linear.z = 0;
-//            point.velocity.angular.x = point.velocity.angular.y = 0;
-//            double vel1_x, vel1_y, vel2_x, vel2_y, omega1, omega2;
-//            extractVelocity(teb_.Pose(i-1), teb_.Pose(i), teb_.TimeDiff(i-1), vel1_x, vel1_y, omega1);
-//            extractVelocity(teb_.Pose(i), teb_.Pose(i+1), teb_.TimeDiff(i), vel2_x, vel2_y, omega2);
-//            point.velocity.linear.x = 0.5*(vel1_x+vel2_x);
-//            point.velocity.linear.y = 0.5*(vel1_y+vel2_y);
-//            point.velocity.angular.z = 0.5*(omega1+omega2);
-//            point.time_from_start.fromSec(curr_time);
-//
-//            curr_time += teb_.TimeDiff(i);
-//        }
-//
-//        // goal
-//        TrajectoryPointMsg& goal = trajectory.back();
-//        teb_.BackPose().toPoseMsg(goal.pose);
-//        goal.velocity.linear.z = 0;
-//        goal.velocity.angular.x = goal.velocity.angular.y = 0;
-//        goal.velocity.linear.x = vel_goal_.second.linear.x;
-//        goal.velocity.linear.y = vel_goal_.second.linear.y;
-//        goal.velocity.angular.z = vel_goal_.second.angular.z;
-//        goal.time_from_start.fromSec(curr_time);
-//    }
-//
+
+    void TebOptimalPlanner::getStFromTraj(const FormationTrajsContainer* formation_trajs,double time,Eigen::Matrix<double, 4, 2>* St) const{
+        const FormationTrajsContainer& trajs = *formation_trajs;
+        for(int i=0;i<trajs.size();i++){
+            double yaw=0,v_x=0,v_y=0,w=0,dt;
+            //init position
+            (*St)(i,0) = trajs[i][0][0];
+            (*St)(i,1) = trajs[i][0][1];
+            yaw = trajs[i][0][2];
+            for(int j=0;j<trajs[i].size()-1;j++){
+                //先找time所在索引段
+                if(time>=trajs[i][j][6] && time<=trajs[i][j+1][6]){
+                    dt = time - trajs[i][j][6];
+                    v_x = (trajs[i][j][3]+trajs[i][j+1][3])/2;
+                    v_y = (trajs[i][j][4]+trajs[i][j+1][4])/2;
+                    w = trajs[i][j][5];
+                    yaw = yaw + w*dt;
+
+                    double v_mx = cos(yaw)*v_x - sin(yaw)*v_y;
+                    double v_my = cos(yaw)*v_y + sin(yaw)*v_x;
+                    (*St)(i,0)  += v_mx*dt;
+                    (*St)(i,1)  += v_my*dt;
+                    break;
+                }else{
+                    dt = trajs[i][j+1][6] - trajs[i][j][6];
+                    v_x = (trajs[i][j][3]+trajs[i][j+1][3])/2;
+                    v_y = (trajs[i][j][4]+trajs[i][j+1][4])/2;
+                    w = trajs[i][j][5];
+                    yaw = yaw + w*dt;
+
+                    double v_mx = cos(yaw)*v_x - sin(yaw)*v_y;
+                    double v_my = cos(yaw)*v_y + sin(yaw)*v_x;
+                    (*St)(i,0)  += v_mx*dt;
+                    (*St)(i,1)  += v_my*dt;
+                }
+
+
+            }
+        }
+        
+
+    }
 
     bool TebOptimalPlanner::isTrajectoryFeasible(void)
     {

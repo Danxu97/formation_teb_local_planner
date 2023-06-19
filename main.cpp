@@ -76,7 +76,12 @@ int main()
     string teb3_path = "/home/ldx/workspace/formation_teb/src/data/traj3.txt";
     string teb4_path = "/home/ldx/workspace/formation_teb/src/data/traj4.txt";
 
+    std::ofstream file("/home/ldx/workspace/formation_teb/src/data/dubug_data.txt", std::ios::trunc);
+    file.close();
+
     ViaPointContainer via_points1,via_points2,via_points3,via_points4,data;
+    FormationTrajsContainer Trajs(4); 
+    std::vector<vector<float>> traj1,traj2,traj3,traj4;
     data= readNumericFile(fpath_path);
     for(int i=0; i<data.size();i+=4){
         via_points1.emplace_back(data[i][0],data[i][1]);
@@ -96,51 +101,18 @@ int main()
     // Setup robot shape model
     RobotFootprintModelPtr robot_model = boost::make_shared<CircularRobotFootprint>(0.4);
     auto visual = TebVisualizationPtr(new TebVisualization(config));
-    auto planner1 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points1);
-    auto planner2 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points2);
-    auto planner3 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points3);
-    auto planner4 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points4);
+    auto planner1 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points1, &Trajs, 1);
+    auto planner2 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points2, &Trajs, 2);
+    auto planner3 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points3, &Trajs, 3);
+    auto planner4 = new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points4, &Trajs, 4);
     cv::Mat show_map = cv::Mat::zeros(cv::Size(500,500),CV_8UC3);
 
     // param
     int offset = 0;
     int iter = 0;
-    while (iter<1)
+    while (iter<10)
     {   
         iter++;
-        memset(show_map.data,255,500*500*3);
-        //PATH1
-        for(int i=0;i<via_points1.size()-1;i++){
-                int x = (int)(via_points1[i][0] * 100.f + offset);
-                int y = (int)(via_points1[i][1] * 100.f + offset);
-                int next_x = (int)(via_points1[i+1][0] * 100.f + offset);
-                int next_y = (int)(via_points1[i+1][1] * 100.f + offset);
-                cv::line(show_map,cv::Point(x,y),cv::Point(next_x,next_y),cv::Scalar(255,127,128));
-        }
-        //PATH2
-        for(int i=0;i<via_points2.size()-1;i++){
-                int x = (int)(via_points2[i][0] * 100.f + offset);
-                int y = (int)(via_points2[i][1] * 100.f + offset);
-                int next_x = (int)(via_points2[i+1][0] * 100.f + offset);
-                int next_y = (int)(via_points2[i+1][1] * 100.f + offset);
-                cv::line(show_map,cv::Point(x,y),cv::Point(next_x,next_y),cv::Scalar(255,127,128));
-        }
-        //PATH3
-        for(int i=0;i<via_points3.size()-1;i++){
-                int x = (int)(via_points3[i][0] * 100.f + offset);
-                int y = (int)(via_points3[i][1] * 100.f + offset);
-                int next_x = (int)(via_points3[i+1][0] * 100.f + offset);
-                int next_y = (int)(via_points3[i+1][1] * 100.f + offset);
-                cv::line(show_map,cv::Point(x,y),cv::Point(next_x,next_y),cv::Scalar(255,127,128));
-        }
-        //PATH3
-        for(int i=0;i<via_points4.size()-1;i++){
-                int x = (int)(via_points4[i][0] * 100.f + offset);
-                int y = (int)(via_points4[i][1] * 100.f + offset);
-                int next_x = (int)(via_points4[i+1][0] * 100.f + offset);
-                int next_y = (int)(via_points4[i+1][1] * 100.f + offset);
-                cv::line(show_map,cv::Point(x,y),cv::Point(next_x,next_y),cv::Scalar(255,127,128));
-        }
         try
         {
             {//PATH1
@@ -148,44 +120,22 @@ int main()
                 PoseSE2 end1(via_points1[len-1][0],via_points1[len-1][1],0);
 
                 planner1->plan(start1,end1);
-                // vi
                 std::vector<Eigen::Vector3f> path;
                 planner1->getFullTrajectory(path);
                 //writeVector3fToFile("data/teb1.txt",path);
-                
-                std::vector<vector<float>> traj;
-                planner1->getFullTrajectoryWithVW(traj);
-                writeVectorXfToFile(teb1_path,traj);
-                for(int i = 0;i < path.size() - 1;i ++)
-                {
-                    int x = (int)(path.at(i)[0] * 100.f + offset);
-                    int y = (int)(path.at(i)[1] * 100.f + offset);
-                    int next_x = (int)(path.at(i+1)[0] * 100.f + offset);
-                    int next_y = (int)(path.at(i+1)[1] * 100.f + offset);
-                    cv::line(show_map,cv::Point(x,y),cv::Point(next_x,next_y),cv::Scalar(0,255*i/path.size(),255-255*i/path.size()));
-                }
+                planner1->getFullTrajectoryWithVW(traj1);
+                Trajs[0] = traj1;
             }
             {//PATH2
                 PoseSE2 start2(via_points2[0][0],via_points2[0][1],0);
                 PoseSE2 end2(via_points2[len-1][0],via_points2[len-1][1],0);
 
                 planner2->plan(start2,end2);
-                // vi
                 std::vector<Eigen::Vector3f> path;
                 planner2->getFullTrajectory(path);
                 //writeVector3fToFile("data/teb2.txt",path);
-
-                std::vector<vector<float>> traj;
-                planner2->getFullTrajectoryWithVW(traj);
-                writeVectorXfToFile(teb2_path,traj);
-                for(int i = 0;i < path.size() - 1;i ++)
-                {
-                    int x = (int)(path.at(i)[0] * 100.f + offset);
-                    int y = (int)(path.at(i)[1] * 100.f + offset);
-                    int next_x = (int)(path.at(i+1)[0] * 100.f + offset);
-                    int next_y = (int)(path.at(i+1)[1] * 100.f + offset);
-                    cv::line(show_map,cv::Point(x,y),cv::Point(next_x,next_y),cv::Scalar(0,255*i/path.size(),255-255*i/path.size()));
-                }
+                planner2->getFullTrajectoryWithVW(traj2);
+                Trajs[1] = traj2;
             }
 
             {//PATH3
@@ -193,58 +143,32 @@ int main()
                 PoseSE2 end3(via_points3[len-1][0],via_points3[len-1][1],0);
 
                 planner3->plan(start3,end3);
-                // vi
                 std::vector<Eigen::Vector3f> path;
                 planner3->getFullTrajectory(path);
                 //writeVector3fToFile("data/teb3.txt",path);
-
-                std::vector<vector<float>> traj;
-                planner3->getFullTrajectoryWithVW(traj);
-                writeVectorXfToFile(teb3_path,traj);
-                for(int i = 0;i < path.size() - 1;i ++)
-                {
-                    int x = (int)(path.at(i)[0] * 100.f + offset);
-                    int y = (int)(path.at(i)[1] * 100.f + offset);
-                    int next_x = (int)(path.at(i+1)[0] * 100.f + offset);
-                    int next_y = (int)(path.at(i+1)[1] * 100.f + offset);
-                    cv::line(show_map,cv::Point(x,y),cv::Point(next_x,next_y),cv::Scalar(0,255*i/path.size(),255-255*i/path.size()));
-                }
+                planner3->getFullTrajectoryWithVW(traj3);
+                Trajs[2] = traj3;
             }
             {//PATH4
                 PoseSE2 start4(via_points4[0][0],via_points4[0][1],0);
                 PoseSE2 end4(via_points4[len-1][0],via_points4[len-1][1],0);
 
                 planner4->plan(start4,end4);
-                // vi
                 std::vector<Eigen::Vector3f> path;
                 planner4->getFullTrajectory(path);
                 //writeVector3fToFile("data/teb4.txt",path);
-
-                std::vector<vector<float>> traj;
-                planner4->getFullTrajectoryWithVW(traj);
-                writeVectorXfToFile(teb4_path,traj);
-                for(int i = 0;i < path.size() - 1;i ++)
-                {
-                    int x = (int)(path.at(i)[0] * 100.f + offset);
-                    int y = (int)(path.at(i)[1] * 100.f + offset);
-                    int next_x = (int)(path.at(i+1)[0] * 100.f + offset);
-                    int next_y = (int)(path.at(i+1)[1] * 100.f + offset);
-                    cv::line(show_map,cv::Point(x,y),cv::Point(next_x,next_y),cv::Scalar(0,255*i/path.size(),255-255*i/path.size()));
-                }
+                planner4->getFullTrajectoryWithVW(traj4);
+                Trajs[3] = traj4;
             }
-
-
-
-            
-            //cv::createTrackbar("start theta","path",&start_theta,100);
-            //cv::createTrackbar("end theta","path",&end_theta,100);
-            //cv::imshow("path",show_map);
         }
         catch (...)
         {
             break;
         }
-        cv::waitKey(0);
     }
+    writeVectorXfToFile(teb1_path,traj1);
+    writeVectorXfToFile(teb2_path,traj2);
+    writeVectorXfToFile(teb3_path,traj3);
+    writeVectorXfToFile(teb4_path,traj4);
     return 0;
 }

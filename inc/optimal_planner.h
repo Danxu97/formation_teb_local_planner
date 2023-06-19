@@ -31,6 +31,7 @@
 #include "g2o_types/edge_shortest_path.h"
 #include "g2o_types/edge_obstacle.h"
 #include "g2o_types/edge_dynamic_obstacle.h"
+#include "g2o_types/edge_keep_formation.h"
 #include "g2o_types/edge_via_point.h"
 #include "g2o_types/edge_prefer_rotdir.h"
 // messages
@@ -48,6 +49,10 @@ namespace teb_local_planner
 
 //! Typedef for a container storing via-points
     typedef std::vector< Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > ViaPointContainer;
+
+//! Typedef for a container storing formation_trajs
+    typedef std::vector<std::vector<std::vector<float>>> FormationTrajsContainer;
+    typedef std::vector<Eigen::Matrix<double, 4, 2>> FormationStContainer;
 
 
 /**
@@ -81,9 +86,12 @@ namespace teb_local_planner
          * @param robot_model Shared pointer to the robot shape model used for optimization (optional)
          * @param visual Shared pointer to the TebVisualization class (optional)
          * @param via_points Container storing via-points (optional)
+         * @param formation_trajs formation trajs
+         * @param foramtion_index robot index
          */
         TebOptimalPlanner(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
-                          TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL);
+                            TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, 
+                            const FormationTrajsContainer* formation_trajs = NULL, int formation_index = 3);
 
         /**
          * @brief Destruct the optimal planner.
@@ -91,16 +99,16 @@ namespace teb_local_planner
         virtual ~TebOptimalPlanner();
 
         /**
-          * @brief Initializes the optimal planner
-          * @param cfg Const reference to the TebConfig class for internal parameters
-          * @param obstacles Container storing all relevant obstacles (see Obstacle)
-          * @param robot_model Shared pointer to the robot shape model used for optimization (optional)
-          * @param visual Shared pointer to the TebVisualization class (optional)
-          * @param via_points Container storing via-points (optional)
-          */
+        * @brief Initializes the optimal planner
+        * @param cfg Const reference to the TebConfig class for internal parameters
+        * @param obstacles Container storing all relevant obstacles (see Obstacle)
+        * @param robot_model Shared pointer to the robot shape model used for optimization (optional)
+        * @param visual Shared pointer to the TebVisualization class (optional)
+        * @param via_points Container storing via-points (optional)
+        * @param formation_trajs_ Container storing formation_trajs_ (optional)
+        */
         void initialize(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
-                        TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL);
-
+                    TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL, const FormationTrajsContainer* formation_trajs = NULL, int formation_index = 3);
 
 
         /** @name Plan a trajectory  */
@@ -453,6 +461,7 @@ namespace teb_local_planner
         //void getFullTrajectory(std::vector<TrajectoryPointMsg>& trajectory) const;
         void getFullTrajectory(std::vector<Eigen::Vector3f>& trajectory) const;
         void getFullTrajectoryWithVW(std::vector<std::vector<float>>& trajectory) const;
+        void getStFromTraj(const FormationTrajsContainer* formation_trajs,double time,Eigen::Matrix<double, 4, 2>* St) const;
         /**
          * @brief Check whether the planned trajectory is feasible or not.
          *
@@ -601,6 +610,15 @@ namespace teb_local_planner
         void AddEdgesDynamicObstacles(double weight_multiplier=1.0);
 
         /**
+         * @brief Add all edges (local cost functions) related to keeping a formation
+         * @see EdgeFormation
+         * @see buildGraph
+         * @see optimizeGraph
+         * @param weight_multiplier Specify an additional weight multipler (in addition to the the config weight)
+         */
+        void AddEdgesFormation();
+
+        /**
          * @brief Add all edges (local cost functions) for satisfying kinematic constraints of a differential drive robot
          * @warning do not combine with AddEdgesKinematicsCarlike()
          * @see AddEdgesKinematicsCarlike
@@ -639,6 +657,9 @@ namespace teb_local_planner
         const TebConfig* cfg_; //!< Config class that stores and manages all related parameters
         ObstContainer* obstacles_; //!< Store obstacles that are relevant for planning
         const ViaPointContainer* via_points_; //!< Store via points for planning
+
+        const FormationTrajsContainer* formation_trajs_;
+        int formation_index_;   
 
         double cost_; //!< Store cost value of the current hyper-graph
         RotType prefer_rotdir_; //!< Store whether to prefer a specific initial rotation in optimization (might be activated in case the robot oscillates)
