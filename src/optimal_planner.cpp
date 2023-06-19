@@ -1274,7 +1274,7 @@ namespace teb_local_planner
     void TebOptimalPlanner::getStFromTraj(const FormationTrajsContainer* formation_trajs,double time,Eigen::Matrix<double, 4, 2>* St) const{
         const FormationTrajsContainer& trajs = *formation_trajs;
         for(int i=0;i<trajs.size();i++){
-            double yaw=0,v_x=0,v_y=0,w=0,dt;
+            double yaw=0,dx=0,dy=0,w=0,dt;
             //init position
             (*St)(i,0) = trajs[i][0][0];
             (*St)(i,1) = trajs[i][0][1];
@@ -1283,27 +1283,21 @@ namespace teb_local_planner
                 //先找time所在索引段
                 if(time>=trajs[i][j][6] && time<=trajs[i][j+1][6]){
                     dt = time - trajs[i][j][6];
-                    v_x = (trajs[i][j][3]+trajs[i][j+1][3])/2;
-                    v_y = (trajs[i][j][4]+trajs[i][j+1][4])/2;
-                    w = trajs[i][j][5];
-                    yaw = yaw + w*dt;
+                    dx = (trajs[i][j+1][0]-trajs[i][j][0])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+                    dy = (trajs[i][j+1][1]-trajs[i][j][1])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+                    yaw =(trajs[i][j+1][2]-trajs[i][j][2])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
 
-                    double v_mx = cos(yaw)*v_x - sin(yaw)*v_y;
-                    double v_my = cos(yaw)*v_y + sin(yaw)*v_x;
-                    (*St)(i,0)  += v_mx*dt;
-                    (*St)(i,1)  += v_my*dt;
+                    (*St)(i,0)  += dx;
+                    (*St)(i,1)  += dy;
                     break;
                 }else{
                     dt = trajs[i][j+1][6] - trajs[i][j][6];
-                    v_x = (trajs[i][j][3]+trajs[i][j+1][3])/2;
-                    v_y = (trajs[i][j][4]+trajs[i][j+1][4])/2;
-                    w = trajs[i][j][5];
-                    yaw = yaw + w*dt;
+                    dx = (trajs[i][j+1][0]-trajs[i][j][0])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+                    dy = (trajs[i][j+1][1]-trajs[i][j][1])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+                    yaw =(trajs[i][j+1][2]-trajs[i][j][2])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
 
-                    double v_mx = cos(yaw)*v_x - sin(yaw)*v_y;
-                    double v_my = cos(yaw)*v_y + sin(yaw)*v_x;
-                    (*St)(i,0)  += v_mx*dt;
-                    (*St)(i,1)  += v_my*dt;
+                    (*St)(i,0)  += dx;
+                    (*St)(i,1)  += dy;
                 }
 
 
