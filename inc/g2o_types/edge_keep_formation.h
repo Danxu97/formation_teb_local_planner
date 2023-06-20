@@ -109,7 +109,7 @@ public:
     D2A0.row(1) = m.row((index_+1)%4);
     D2A0.row(2) = m.row((index_)%4);
     //std::cout<<"D2A0:"<<D2A0<<std::endl;
-    calculateCircleIntersection(D2A0,1,1);
+    calculateCircleIntersection(D2A0,0.8,0.8);
 
     D2A_SNL0 = calculateSNL(D2A0,true);
 
@@ -125,7 +125,7 @@ public:
     SNL = calculateSNL(m,true);
     double err_sim  = (SNL0 - SNL).norm();
     double err_d2a = (D2A_SNL0 - D2A_SNL).norm();
-    _error[0] = 0.7*err_sim + 0.3*err_d2a;
+    _error[0] = 0.9*err_sim + 0.1*err_d2a;
     //----------dubug log---------------//
     DataEntry data;
     data.id = index_;
