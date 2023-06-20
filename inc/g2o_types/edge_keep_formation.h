@@ -123,7 +123,9 @@ public:
 
     m.row(index_) = bandpt->position();                           
     SNL = calculateSNL(m,true);
-    _error[0] = 0.7*(SNL0 - SNL).norm() + 0.3*(D2A_SNL0 - D2A_SNL).norm();
+    double err_sim  = (SNL0 - SNL).norm();
+    double err_d2a = (D2A_SNL0 - D2A_SNL).norm();
+    _error[0] = 0.7*err_sim + 0.3*err_d2a;
     //----------dubug log---------------//
     DataEntry data;
     data.id = index_;
@@ -131,7 +133,8 @@ public:
     data.dt = deltaT->estimate();
     data.pose = bandpt->position();
     data.measurement = m;
-    data.ff = _error[0];
+    data.err_sim = err_sim;
+    data.err_d2a = err_d2a;
     // 将数据写入文件
     writeDataToFile(data, "/home/ldx/workspace/formation_teb/src/data/dubug_data.txt");
   }
@@ -217,7 +220,8 @@ private:
     double dt;
     Eigen::Vector2d pose;
     Eigen::Matrix<double, 4, 2> measurement;
-    double ff;
+    double err_sim;
+    double err_d2a;
   };
   void writeDataToFile(const DataEntry& data, const std::string& filename) {
     // 打开文件并追加数据
@@ -236,7 +240,9 @@ private:
         << data.measurement.row(1)[0] << " " << data.measurement.row(1)[1] << " "
         << data.measurement.row(2)[0] << " " << data.measurement.row(2)[1] << " "
         << data.measurement.row(3)[0] << " " << data.measurement.row(3)[1] << " "
-        << data.ff << std::endl;
+        << data.err_sim << " "
+        << data.err_d2a << " "
+        << std::endl;
 
     // 关闭文件
     file.close();
