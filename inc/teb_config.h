@@ -212,9 +212,9 @@ namespace teb_local_planner
 
             // Robot
 
-            robot.max_vel_x = 0.5;
+            robot.max_vel_x = 1;
             robot.max_vel_x_backwards = 0.4;
-            robot.max_vel_y = 0.5;
+            robot.max_vel_y = 1;
             robot.max_vel_theta = 0.3;
             robot.acc_lim_x = 0.5;
             robot.acc_lim_y = 0.5;
@@ -269,9 +269,9 @@ namespace teb_local_planner
             optim.weight_inflation = 1;
             optim.weight_dynamic_obstacle = 50;
             optim.weight_dynamic_obstacle_inflation = 0.1;
-            optim.weight_keep_formation = 20; //80
+            optim.weight_keep_formation = 100; //80
             optim.weight_viapoint = 100;
-            optim.weight_prefer_rotdir = 20;
+            optim.weight_prefer_rotdir = 0;
 
             optim.weight_adapt_factor = 2.0;
             optim.obstacle_cost_exponent = 1.0;

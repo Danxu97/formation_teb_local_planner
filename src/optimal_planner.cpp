@@ -683,9 +683,8 @@ namespace teb_local_planner
         for (int i=0; i < teb_.sizePoses() - 1; i++)
         {   
             //当前机器人的每个配置都计算一遍error
-            EdgeKeepFormation* keep_formation_edge = new EdgeKeepFormation(formation_index_);
-            keep_formation_edge->setVertex(0,teb_.PoseVertex(i+1));           
-            keep_formation_edge->setVertex(1,teb_.TimeDiffVertex(i));
+            EdgeKeepFormation* keep_formation_edge = new EdgeKeepFormation(formation_index_);          
+            keep_formation_edge->setVertex(0,teb_.TimeDiffVertex(i));
             keep_formation_edge->setInformation(information);
             keep_formation_edge->setParameters(*cfg_, &(*formation_trajs_),time_i);
             optimizer_->addEdge(keep_formation_edge);

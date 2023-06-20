@@ -60,7 +60,7 @@ namespace teb_local_planner
  * @remarks Do not forget to call setTebConfig(), setVertexIdx() and 
  * @warning Experimental
  */   
-class EdgeKeepFormation : public BaseTebBinaryEdge<1, const std::vector<std::vector<std::vector<float>>>*, VertexPose,VertexTimeDiff>  //1指定error的个数，会结合information这个权重矩阵进行总error计算
+class EdgeKeepFormation : public BaseTebUnaryEdge<1, const std::vector<std::vector<std::vector<float>>>*,VertexTimeDiff>  //1指定error的个数，会结合information这个权重矩阵进行总error计算
 {
 public:
     
@@ -89,8 +89,7 @@ public:
    */   
   void computeError()
   {
-    const VertexPose* bandpt = static_cast<const VertexPose*>(_vertices[0]);
-    const VertexTimeDiff* deltaT = static_cast<const VertexTimeDiff*>(_vertices[1]);
+    const VertexTimeDiff* deltaT = static_cast<const VertexTimeDiff*>(_vertices[0]);
     Eigen::Matrix4d SNL0,SNL;
 
     //rect
@@ -100,36 +99,22 @@ public:
             -0.2929,   -0.4142,   -0.2929,    1.0000;
 
     Eigen::Matrix<double, 4, 2> m;
-    double time_now = time_i_+deltaT->estimate();
-    getStFromTraj(time_now,&m);
-    Eigen::Matrix<double,3,2> D2A0,D2A;
-    Eigen::Matrix<double,3,3> D2A_SNL0,D2A_SNL;
+    int piece = 10;//分成p份
+    for(int i=0;i<piece;i++){ 
+      double time_now = time_i_ + deltaT->estimate()*i/(piece-1);
+      getStFromTraj(time_now,&m);
+      SNL = calculateSNL(m,true);
+      _error[0] += 1*(SNL0 - SNL).norm();
+    }
+
+
     
-    D2A0.row(0) = m.row((index_+3)%4);
-    D2A0.row(1) = m.row((index_+1)%4);
-    D2A0.row(2) = m.row((index_)%4);
-    //std::cout<<"D2A0:"<<D2A0<<std::endl;
-    calculateCircleIntersection(D2A0,1,1);
-
-    D2A_SNL0 = calculateSNL(D2A0,true);
-
-    D2A.row(0) = m.row((index_+3)%4);
-    D2A.row(1) = m.row((index_+1)%4);
-    D2A.row(2) = bandpt->position();
-    D2A_SNL = calculateSNL(D2A,true);
-    
-    //std::cout<<"D2A0:"<<D2A0<<std::endl;
-    //std::cout<<"D2A:"<<D2A<<std::endl;
-
-    m.row(index_) = bandpt->position();                           
-    SNL = calculateSNL(m,true);
-    _error[0] = 1*(SNL0 - SNL).norm() + 0.0*(D2A_SNL0 - D2A_SNL).norm();
     //----------dubug log---------------//
     DataEntry data;
     data.id = index_;
     data.time_i = time_i_;
     data.dt = deltaT->estimate();
-    data.pose = bandpt->position();
+    data.pose = m.row((index_)%4);
     data.measurement = m;
     data.ff = _error[0];
     // 将数据写入文件
