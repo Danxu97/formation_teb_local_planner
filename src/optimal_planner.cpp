@@ -678,26 +678,18 @@ namespace teb_local_planner
         Eigen::Matrix<double,1,1> information;
         information.fill(cfg_->optim.weight_keep_formation);
         //-----添加编队约束的顶点和边-------//
-        //遍历当前配置
-        double time_now = 0;
+        //从第2个配置开始，遍历当前配置集合
+        double time_i = 0;
         for (int i=0; i < teb_.sizePoses() - 1; i++)
         {   
-            Eigen::Matrix<double, 4, 2>* formation_st_ptr=new Eigen::Matrix<double, 4, 2>;
-            time_now +=teb_.TimeDiff(i);
-            //为机器人的每个配置在相同时刻对应上其他机器人的配置
-            for(int j=0; j < 4; ++j)
-            {
-                //formation pos储存了编队当前时刻的位置
-                getStFromTraj(formation_trajs_,time_now,formation_st_ptr);
-
-            }
-            //std::cout<<"time now:"<<time_now<<"\n_measurement    0:"<<*formation_st_ptr<<std::endl;
             //当前机器人的每个配置都计算一遍error
             EdgeKeepFormation* keep_formation_edge = new EdgeKeepFormation(formation_index_);
-            keep_formation_edge->setVertex(0,teb_.PoseVertex(i));
+            keep_formation_edge->setVertex(0,teb_.PoseVertex(i+1));           
+            keep_formation_edge->setVertex(1,teb_.TimeDiffVertex(i));
             keep_formation_edge->setInformation(information);
-            keep_formation_edge->setParameters(*cfg_, &(*formation_st_ptr));
+            keep_formation_edge->setParameters(*cfg_, &(*formation_trajs_),time_i);
             optimizer_->addEdge(keep_formation_edge);
+            time_i +=teb_.TimeDiff(i);
         }
     
     }

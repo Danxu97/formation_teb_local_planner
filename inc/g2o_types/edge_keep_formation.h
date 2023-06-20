@@ -60,7 +60,7 @@ namespace teb_local_planner
  * @remarks Do not forget to call setTebConfig(), setVertexIdx() and 
  * @warning Experimental
  */   
-class EdgeKeepFormation : public BaseTebUnaryEdge<1, const Eigen::Matrix<double, 4, 2>*, VertexPose>  //1指定error的个数，会结合information这个权重矩阵进行总error计算
+class EdgeKeepFormation : public BaseTebBinaryEdge<1, const std::vector<std::vector<std::vector<float>>>*, VertexPose,VertexTimeDiff>  //1指定error的个数，会结合information这个权重矩阵进行总error计算
 {
 public:
     
@@ -69,6 +69,7 @@ public:
    */    
   EdgeKeepFormation() : index_(3)
   {
+    //this->resize(2);
     _measurement = NULL;
   }
 
@@ -78,6 +79,7 @@ public:
    */    
   EdgeKeepFormation(int index) : index_(index)
   {
+    //this->resize(3);  //3表示参与优化的有三个量
     _measurement = NULL;
   }
  
@@ -88,7 +90,7 @@ public:
   void computeError()
   {
     const VertexPose* bandpt = static_cast<const VertexPose*>(_vertices[0]);
-
+    const VertexTimeDiff* deltaT = static_cast<const VertexTimeDiff*>(_vertices[1]);
     Eigen::Matrix4d SNL0,SNL;
 
     //rect
@@ -97,7 +99,9 @@ public:
             -0.4142,   -0.2929,    1.0000,   -0.2929,
             -0.2929,   -0.4142,   -0.2929,    1.0000;
 
-    Eigen::Matrix<double, 4, 2> m = *_measurement;
+    Eigen::Matrix<double, 4, 2> m;
+    double time_now = time_i_+deltaT->estimate();
+    getStFromTraj(time_now,&m);
     Eigen::Matrix<double,3,2> D2A0,D2A;
     Eigen::Matrix<double,3,3> D2A_SNL0,D2A_SNL;
     
@@ -119,11 +123,13 @@ public:
 
     m.row(index_) = bandpt->position();                           
     SNL = calculateSNL(m,true);
-    _error[0] = 0.0*(SNL0 - SNL).norm() + 1.0*(D2A_SNL0 - D2A_SNL).norm();
+    _error[0] = 1*(SNL0 - SNL).norm() + 0.0*(D2A_SNL0 - D2A_SNL).norm();
     //----------dubug log---------------//
     DataEntry data;
     data.id = index_;
-    data.pose0 = bandpt->position();
+    data.time_i = time_i_;
+    data.dt = deltaT->estimate();
+    data.pose = bandpt->position();
     data.measurement = m;
     data.ff = _error[0];
     // 将数据写入文件
@@ -180,9 +186,9 @@ public:
    * @brief Set Formation for the underlying cost function
    * @param obstacles Const pointer to an ObstContainer
    */     
-  void setFormation(const Eigen::Matrix<double, 4, 2>* formation_position_ptr)
+  void setFormation(const std::vector<std::vector<std::vector<float>>>* formation_trajs_ptr)
   {
-    _measurement = formation_position_ptr;
+    _measurement = formation_trajs_ptr;
   }
     
   /**
@@ -191,10 +197,11 @@ public:
    * @param robot_model Robot model required for distance calculation
    * @param obstacles 2D position vector containing the position of the obstacles
    */
-  void setParameters(const TebConfig& cfg, const Eigen::Matrix<double, 4, 2>* formation_position_ptr)
+  void setParameters(const TebConfig& cfg,const std::vector<std::vector<std::vector<float>>>* formation_trajs_ptr,double time_i)
   {
     cfg_ = &cfg;
-    _measurement = formation_position_ptr;
+    _measurement = formation_trajs_ptr;
+    time_i_ = time_i;
     // std::cout<<"* _measurement     1:"<<std::endl <<* _measurement<<std::endl;
   }
   
@@ -203,9 +210,12 @@ protected:
   int index_; //index of robot(0, 1, 2, 3)
 
 private:
+  double time_i_;
   struct DataEntry {
     int id;
-    Eigen::Vector2d pose0;
+    double time_i;
+    double dt;
+    Eigen::Vector2d pose;
     Eigen::Matrix<double, 4, 2> measurement;
     double ff;
   };
@@ -219,7 +229,9 @@ private:
 
     // 将数据按行写入文件
     file << data.id << " "
-        << data.pose0[0] << " " << data.pose0[1] << " "
+        << data.time_i << " "
+        << data.dt << " "
+        << data.pose[0] << " " << data.pose[1] << " "
         << data.measurement.row(0)[0] << " " << data.measurement.row(0)[1] << " "
         << data.measurement.row(1)[0] << " " << data.measurement.row(1)[1] << " "
         << data.measurement.row(2)[0] << " " << data.measurement.row(2)[1] << " "
@@ -261,7 +273,38 @@ private:
     //std::cout<<"matrix row(2):"<<matrix.row(2)<<std::endl;
   }
 
-  
+  void getStFromTraj(double time,Eigen::Matrix<double, 4, 2>* St){
+    const std::vector<std::vector<std::vector<float>>> trajs = *_measurement;
+    for(int i=0;i<trajs.size();i++){
+        double yaw=0,dx=0,dy=0,w=0,dt;
+        //init position
+        (*St)(i,0) = trajs[i][0][0];
+        (*St)(i,1) = trajs[i][0][1];
+        yaw = trajs[i][0][2];
+        for(int j=0;j<trajs[i].size()-1;j++){
+            //先找time所在索引段
+            if(time>=trajs[i][j][6] && time<=trajs[i][j+1][6]){
+                                    dt = time - trajs[i][j][6];
+                dx = (trajs[i][j+1][0]-trajs[i][j][0])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+                dy = (trajs[i][j+1][1]-trajs[i][j][1])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+                yaw =(trajs[i][j+1][2]-trajs[i][j][2])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+
+                (*St)(i,0)  += dx;
+                (*St)(i,1)  += dy;
+                break;
+            }else{
+                dt = trajs[i][j+1][6] - trajs[i][j][6];
+                dx = (trajs[i][j+1][0]-trajs[i][j][0])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+                dy = (trajs[i][j+1][1]-trajs[i][j][1])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+                yaw =(trajs[i][j+1][2]-trajs[i][j][2])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+
+                (*St)(i,0)  += dx;
+                (*St)(i,1)  += dy;
+            }
+        }
+    }
+  }
+
   Eigen::MatrixXd calculateSNL(const Eigen::MatrixXd& matrix,bool sn=true) {
     int numPoints = matrix.rows();  // 矩阵的行数
 
@@ -270,10 +313,11 @@ private:
     Eigen::MatrixXd degreeMatrix = Eigen::MatrixXd::Zero(numPoints,numPoints);
     for (int i = 0; i < numPoints; ++i) {
         for (int j = 0; j < numPoints; ++j) {
-            double distance = (matrix.row(i) - matrix.row(j)).norm();  // 计算两行之间的距离
-           // std::cout<<"row(i):"<<matrix.row(i)<<"row(j):"<<matrix.row(j)<<"distance:"<<distance<<std::endl;
-            adjacencyMatrix(i, j) = distance;
-            degreeMatrix(i,i) += adjacencyMatrix(i,j);
+          double distance = (matrix.row(i) - matrix.row(j)).norm();  // 计算两行之间的距离
+          //double distance = (matrix.row(i) - matrix.row(j)).cwiseAbs2().sum();
+          // std::cout<<"row(i):"<<matrix.row(i)<<"row(j):"<<matrix.row(j)<<"distance:"<<distance<<std::endl;
+          adjacencyMatrix(i, j) = distance;
+          degreeMatrix(i,i) += adjacencyMatrix(i,j);
         }
     }
 
