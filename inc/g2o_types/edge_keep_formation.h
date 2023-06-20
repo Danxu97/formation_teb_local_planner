@@ -97,18 +97,20 @@ public:
             -0.2929,    1.0000,   -0.2929,   -0.4142,
             -0.4142,   -0.2929,    1.0000,   -0.2929,
             -0.2929,   -0.4142,   -0.2929,    1.0000;
-
-    Eigen::Matrix<double, 4, 2> m;
-    int piece = 10;//分成p份
-    for(int i=0;i<piece;i++){ 
-      double time_now = time_i_ + deltaT->estimate()*i/(piece-1);
-      getStFromTraj(time_now,&m);
-      SNL = calculateSNL(m,true);
-      _error[0] += 1*(SNL0 - SNL).norm();
-    }
-
-
     
+    time_i1_ = time_i_ + deltaT->estimate();
+    Eigen::Matrix<double, 4, 2> m;
+    int piece = 1;//分成p份
+    for(int i=0;i<piece;i++){ 
+      
+    }
+    double time_now = time_i_ + deltaT->estimate();
+    //std::cout<<"1";
+    getStFromTraj(time_now,&m);
+    //std::cout<<"2";
+    SNL = calculateSNL(m,true);
+    _error[0] = (SNL0 - SNL).norm();
+
     //----------dubug log---------------//
     DataEntry data;
     data.id = index_;
@@ -117,6 +119,7 @@ public:
     data.pose = m.row((index_)%4);
     data.measurement = m;
     data.ff = _error[0];
+    //std::cout<<"measurement:"<<m;
     // 将数据写入文件
     writeDataToFile(data, "/home/ldx/workspace/formation_teb/src/data/dubug_data.txt");
   }
@@ -182,11 +185,13 @@ public:
    * @param robot_model Robot model required for distance calculation
    * @param obstacles 2D position vector containing the position of the obstacles
    */
-  void setParameters(const TebConfig& cfg,const std::vector<std::vector<std::vector<float>>>* formation_trajs_ptr,double time_i)
+  void setParameters(const TebConfig& cfg,const std::vector<std::vector<std::vector<float>>>* formation_trajs_ptr,int idx,std::vector<std::vector<float>> traj)
   {
     cfg_ = &cfg;
     _measurement = formation_trajs_ptr;
-    time_i_ = time_i;
+    time_i_ = traj[idx][6];
+    idx_ = idx;
+    traj_ = traj;
     // std::cout<<"* _measurement     1:"<<std::endl <<* _measurement<<std::endl;
   }
   
@@ -195,7 +200,9 @@ protected:
   int index_; //index of robot(0, 1, 2, 3)
 
 private:
-  double time_i_;
+  double time_i_,time_i1_;
+  int idx_;
+  std::vector<std::vector<float>> traj_;
   struct DataEntry {
     int id;
     double time_i;
@@ -259,34 +266,56 @@ private:
   }
 
   void getStFromTraj(double time,Eigen::Matrix<double, 4, 2>* St){
-    const std::vector<std::vector<std::vector<float>>> trajs = *_measurement;
+    std::vector<std::vector<std::vector<float>>> trajs = *_measurement;
+    traj_[idx_+1][6] = time_i1_;
     for(int i=0;i<trajs.size();i++){
-        double yaw=0,dx=0,dy=0,w=0,dt;
+        double dx=0,dy=0,w=0,dt;
         //init position
         (*St)(i,0) = trajs[i][0][0];
         (*St)(i,1) = trajs[i][0][1];
-        yaw = trajs[i][0][2];
-        for(int j=0;j<trajs[i].size()-1;j++){
+
+        if(i == index_){
+          for(int j=0;j<traj_.size()-1;j++){
+            //先找time所在索引段
+            if(time>=traj_[j][6] && time<=traj_[j+1][6]){
+              dt = time - traj_[j][6];
+              dx = (traj_[j+1][0]-traj_[j][0])*dt/(traj_[j+1][6] - traj_[j][6]);
+              dy = (traj_[j+1][1]-traj_[j][1])*dt/(traj_[j+1][6] - traj_[j][6]);
+
+              (*St)(i,0)  += dx;
+              (*St)(i,1)  += dy;
+              break;
+            }else{
+              dt = traj_[j+1][6] - traj_[j][6];
+              dx = (traj_[j+1][0]-traj_[j][0])*dt/(traj_[j+1][6] - traj_[j][6]);
+              dy = (traj_[j+1][1]-traj_[j][1])*dt/(traj_[j+1][6] - traj_[j][6]);
+
+              (*St)(i,0)  += dx;
+              (*St)(i,1)  += dy;
+            }
+          }
+        }else{
+          for(int j=0;j<trajs[i].size()-1;j++){
             //先找time所在索引段
             if(time>=trajs[i][j][6] && time<=trajs[i][j+1][6]){
-                                    dt = time - trajs[i][j][6];
-                dx = (trajs[i][j+1][0]-trajs[i][j][0])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
-                dy = (trajs[i][j+1][1]-trajs[i][j][1])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
-                yaw =(trajs[i][j+1][2]-trajs[i][j][2])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+              dt = time - trajs[i][j][6];
+              dx = (trajs[i][j+1][0]-trajs[i][j][0])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+              dy = (trajs[i][j+1][1]-trajs[i][j][1])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
 
-                (*St)(i,0)  += dx;
-                (*St)(i,1)  += dy;
-                break;
+              (*St)(i,0)  += dx;
+              (*St)(i,1)  += dy;
+              break;
             }else{
-                dt = trajs[i][j+1][6] - trajs[i][j][6];
-                dx = (trajs[i][j+1][0]-trajs[i][j][0])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
-                dy = (trajs[i][j+1][1]-trajs[i][j][1])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
-                yaw =(trajs[i][j+1][2]-trajs[i][j][2])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+              dt = trajs[i][j+1][6] - trajs[i][j][6];
+              dx = (trajs[i][j+1][0]-trajs[i][j][0])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
+              dy = (trajs[i][j+1][1]-trajs[i][j][1])*dt/(trajs[i][j+1][6] - trajs[i][j][6]);
 
-                (*St)(i,0)  += dx;
-                (*St)(i,1)  += dy;
+              (*St)(i,0)  += dx;
+              (*St)(i,1)  += dy;
             }
+          }
         }
+        
     }
   }
 

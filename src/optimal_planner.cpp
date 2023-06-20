@@ -674,21 +674,21 @@ namespace teb_local_planner
                 std::cout<<"等待轨迹"<<std::endl;
                 return;
             }
-        // std::cout<<"AddEdgesFormation"<<std::endl;
         Eigen::Matrix<double,1,1> information;
         information.fill(cfg_->optim.weight_keep_formation);
+        //---更新最新轨迹-----//
+        std::vector<std::vector<float>> traj;
+        getFullTrajectoryWithVW(traj);
         //-----添加编队约束的顶点和边-------//
         //从第2个配置开始，遍历当前配置集合
-        double time_i = 0;
         for (int i=0; i < teb_.sizePoses() - 1; i++)
         {   
             //当前机器人的每个配置都计算一遍error
             EdgeKeepFormation* keep_formation_edge = new EdgeKeepFormation(formation_index_);          
             keep_formation_edge->setVertex(0,teb_.TimeDiffVertex(i));
             keep_formation_edge->setInformation(information);
-            keep_formation_edge->setParameters(*cfg_, &(*formation_trajs_),time_i);
+            keep_formation_edge->setParameters(*cfg_, &(*formation_trajs_),i,traj);
             optimizer_->addEdge(keep_formation_edge);
-            time_i +=teb_.TimeDiff(i);
         }
     
     }
