@@ -234,7 +234,7 @@ namespace teb_local_planner
             // Obstacles
 
             obstacles.min_obstacle_dist = 0.2;
-            obstacles.inflation_dist = 0.2;
+            obstacles.inflation_dist = 0.4;
             obstacles.dynamic_obstacle_inflation_dist = 0.6;
             obstacles.include_dynamic_obstacles = false;
             obstacles.include_costmap_obstacles = true;
@@ -265,11 +265,11 @@ namespace teb_local_planner
             optim.weight_kinematics_turning_radius = 0; //0 for omni robot
             optim.weight_optimaltime = 0.1;
             optim.weight_shortest_path = 0;
-            optim.weight_obstacle = 100;
+            optim.weight_obstacle = 1000;
             optim.weight_inflation = 1;
             optim.weight_dynamic_obstacle = 50;
             optim.weight_dynamic_obstacle_inflation = 0.1;
-            optim.weight_keep_formation = 0; //80
+            optim.weight_keep_formation = 10; //80
             optim.weight_viapoint = 200;
             optim.weight_prefer_rotdir = 20;
 
