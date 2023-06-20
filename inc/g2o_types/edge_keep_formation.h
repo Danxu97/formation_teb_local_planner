@@ -123,7 +123,7 @@ public:
 
     m.row(index_) = bandpt->position();                           
     SNL = calculateSNL(m,true);
-    _error[0] = 1*(SNL0 - SNL).norm() + 0.0*(D2A_SNL0 - D2A_SNL).norm();
+    _error[0] = 0.7*(SNL0 - SNL).norm() + 0.3*(D2A_SNL0 - D2A_SNL).norm();
     //----------dubug log---------------//
     DataEntry data;
     data.id = index_;
