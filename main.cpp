@@ -110,7 +110,7 @@ int main()
     ObstContainer obs;
 
     data= readNumericFile(fpath_path);
-    obs = readNumericFile4obs(obs_path);
+    //obs = readNumericFile4obs(obs_path);
     for(int i=0; i<data.size();i+=4){
         via_points1.emplace_back(data[i][0],data[i][1]);
         via_points2.emplace_back(data[i+1][0],data[i+1][1]);
