@@ -92,14 +92,16 @@ public:
     const VertexPose* bandpt = static_cast<const VertexPose*>(_vertices[0]);
     const VertexTimeDiff* deltaT = static_cast<const VertexTimeDiff*>(_vertices[1]);
     Eigen::Matrix4d SNL0,SNL;
-
-    //rect
-    SNL0 <<  1.0000,   -0.2929,   -0.4142,   -0.2929,
-            -0.2929,    1.0000,   -0.2929,   -0.4142,
-            -0.4142,   -0.2929,    1.0000,   -0.2929,
-            -0.2929,   -0.4142,   -0.2929,    1.0000;
-
     Eigen::Matrix<double, 4, 2> m;
+    //rect
+    // SNL0 <<  1.0000,   -0.2929,   -0.4142,   -0.2929,
+    //         -0.2929,    1.0000,   -0.2929,   -0.4142,
+    //         -0.4142,   -0.2929,    1.0000,   -0.2929,
+    //         -0.2929,   -0.4142,   -0.2929,    1.0000;
+    getStFromTraj(0,&m);
+    SNL0 = calculateSNL(m,true);
+    std::cout<<SNL0<<std::endl;
+
     double time_now = time_i_+deltaT->estimate();
     getStFromTraj(time_now,&m);
     Eigen::Matrix<double,3,2> D2A0,D2A;
@@ -109,7 +111,7 @@ public:
     D2A0.row(1) = m.row((index_+1)%4);
     D2A0.row(2) = m.row((index_)%4);
     //std::cout<<"D2A0:"<<D2A0<<std::endl;
-    calculateCircleIntersection(D2A0,0.8,0.8);
+    calculateCircleIntersection(D2A0,r1_,r2_);
 
     D2A_SNL0 = calculateSNL(D2A0,true);
 
@@ -205,7 +207,16 @@ public:
     cfg_ = &cfg;
     _measurement = formation_trajs_ptr;
     time_i_ = time_i;
-    // std::cout<<"* _measurement     1:"<<std::endl <<* _measurement<<std::endl;
+    Eigen::Vector2f p1;
+    p1 << (*_measurement)[(index_+3)%4][0][0],(*_measurement)[(index_+3)%4][0][1];
+    Eigen::Vector2f p2;
+    p2 << (*_measurement)[(index_+1)%4][0][0],(*_measurement)[(index_+1)%4][0][1];
+    Eigen::Vector2f p3;
+    p3 << (*_measurement)[index_%4][0][0],(*_measurement)[index_%4][0][1];
+    
+    r1_ = (p1-p3).norm();
+    r2_ = (p2-p3).norm();
+    std::cout<<"r1:  "<<r1_<<"    r2:  " <<r2_<<std::endl;
   }
   
 protected:
@@ -214,6 +225,7 @@ protected:
 
 private:
   double time_i_;
+  double r1_,r2_;
   struct DataEntry {
     int id;
     double time_i;
