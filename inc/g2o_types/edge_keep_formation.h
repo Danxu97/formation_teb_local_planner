@@ -127,7 +127,7 @@ public:
     SNL = calculateSNL(m,true);
     double err_sim  = (SNL0 - SNL).norm();
     double err_d2a = (D2A_SNL0 - D2A_SNL).norm();
-    _error[0] = 0.9*err_sim + 0.1*err_d2a;
+    _error[0] = 1.0*err_sim + 0.0*err_d2a;
     //----------dubug log---------------//
     DataEntry data;
     data.id = index_;

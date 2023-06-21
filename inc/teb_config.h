@@ -269,7 +269,7 @@ namespace teb_local_planner
             optim.weight_inflation = 1;
             optim.weight_dynamic_obstacle = 50;
             optim.weight_dynamic_obstacle_inflation = 0.1;
-            optim.weight_keep_formation = 10; //80
+            optim.weight_keep_formation = 5; 
             optim.weight_viapoint = 10;
             optim.weight_prefer_rotdir = 20;
 
