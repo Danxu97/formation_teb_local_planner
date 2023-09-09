@@ -7,11 +7,12 @@
 #include <boost/smart_ptr.hpp>
 #include <fstream>
 #include <opencv2/opencv.hpp>
+#include "time.h"
 
 using namespace teb_local_planner;
 using namespace std;
 
-
+clock_t   start,   finish;
 
 ObstContainer readNumericFile4obs(const std::string& filename) {
     ObstContainer data;
@@ -94,12 +95,12 @@ void writeVectorXfToFile(const std::string& filename, const std::vector<vector<f
 
 int main()
 {   
-    string fpath_path = "/home/ldx/workspace/formation_teb/src/data/fpath.txt";
+    string fpath_path = "/home/ldx/workspace/src/data/fpath.txt";
     string obs_path = "/home/ldx/workspace/formation_teb/src/data/obs.txt";
-    string teb1_path = "/home/ldx/workspace/formation_teb/src/data/traj1.txt";
-    string teb2_path = "/home/ldx/workspace/formation_teb/src/data/traj2.txt";
-    string teb3_path = "/home/ldx/workspace/formation_teb/src/data/traj3.txt";
-    string teb4_path = "/home/ldx/workspace/formation_teb/src/data/traj4.txt";
+    string teb1_path = "/home/ldx/fteb-planner-swarm/src/fteb_planner/plan_manage/data/traj1.txt";
+    string teb2_path = "/home/ldx/fteb-planner-swarm/src/fteb_planner/plan_manage/data/traj2.txt";
+    string teb3_path = "/home/ldx/fteb-planner-swarm/src/fteb_planner/plan_manage/data/traj3.txt";
+    string teb4_path = "/home/ldx/fteb-planner-swarm/src/fteb_planner/plan_manage/data/traj4.txt";
 
     std::ofstream file("/home/ldx/workspace/formation_teb/src/data/dubug_data.txt", std::ios::trunc);
     file.close();
@@ -111,7 +112,7 @@ int main()
 
     data= readNumericFile(fpath_path);
     //obs = readNumericFile4obs(obs_path);
-    for(int i=0; i<data.size();i+=4){
+    for(int i=0; i<data.size()/2;i+=4){
         via_points1.emplace_back(data[i][0],data[i][1]);
         via_points2.emplace_back(data[i+1][0],data[i+1][1]);
         via_points3.emplace_back(data[i+2][0],data[i+2][1]);
@@ -138,6 +139,7 @@ int main()
     // param
     int offset = 0;
     int iter = 0;
+    start = clock();
     while (iter<5)
     {   
         iter++;
@@ -194,6 +196,8 @@ int main()
             break;
         }
     }
+    finish = clock();
+    printf("%f seconds\n",(double)(finish-start)/CLOCKS_PER_SEC);
     writeVectorXfToFile(teb1_path,traj1);
     writeVectorXfToFile(teb2_path,traj2);
     writeVectorXfToFile(teb3_path,traj3);

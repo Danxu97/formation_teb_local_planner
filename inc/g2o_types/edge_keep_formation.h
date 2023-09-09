@@ -100,7 +100,7 @@ public:
     //         -0.2929,   -0.4142,   -0.2929,    1.0000;
     getStFromTraj(0,&m);
     SNL0 = calculateSNL(m,true);
-    std::cout<<SNL0<<std::endl;
+    //std::cout<<SNL0<<std::endl;
 
     double time_now = time_i_+deltaT->estimate();
     getStFromTraj(time_now,&m);
@@ -138,7 +138,7 @@ public:
     data.err_sim = err_sim;
     data.err_d2a = err_d2a;
     // 将数据写入文件
-    writeDataToFile(data, "/home/ldx/workspace/formation_teb/src/data/dubug_data.txt");
+    //writeDataToFile(data, "/home/ldx/workspace/formation_teb/src/data/dubug_data.txt");
   }
   
 
@@ -216,7 +216,7 @@ public:
     
     r1_ = (p1-p3).norm();
     r2_ = (p2-p3).norm();
-    std::cout<<"r1:  "<<r1_<<"    r2:  " <<r2_<<std::endl;
+    //std::cout<<"r1:  "<<r1_<<"    r2:  " <<r2_<<std::endl;
   }
   
 protected:
